@@ -1,5 +1,5 @@
 --[[
-    ShiBuHub v2.3.2 NO VIRTUALUSER
+    ShiBuHub v2.3.3 COMPILE FIX
     Immediate loading screen -> protected compile/run -> menu.
     If initialization fails, the loading panel shows the exact error instead of silently disappearing.
 ]]
@@ -72,7 +72,7 @@ version.Font=Enum.Font.Gotham
 version.TextSize=12
 version.TextColor3=Color3.fromRGB(142,176,192)
 version.TextXAlignment=Enum.TextXAlignment.Left
-version.Text="v2.3.2 • Monster Auto Feed"
+version.Text="v2.3.3 • Monster Auto Feed"
 version.ZIndex=5002
 version.Parent=card
 
@@ -149,7 +149,7 @@ task.wait(.03)
 
 local SOURCE = [======[
 --[[
-    ShiBuHub v2.3.2 • TREADMILL + MONSTER AUTO FEED
+    ShiBuHub v2.3.3 • TREADMILL + MONSTER AUTO FEED
     Steal An Egg • Delta X Mobile
     - Embedded ShiBuHub logo
     - Cyan/teal cloud-tech UI
@@ -732,7 +732,7 @@ local function sendWebhook(title, description)
         embeds={{
             title=tostring(title),
             description=tostring(description),
-            footer={text="ShiBuHub v2.3.2"},
+            footer={text="ShiBuHub v2.3.3"},
             timestamp=DateTime.now():ToIsoDate(),
         }}
     })
@@ -1515,7 +1515,7 @@ end
 
 pageHeader(Home,"ShiBuHub Dashboard","Cloud-tech themed build • branded edition")
 homeCard=card(Home,80,180)
-hl=textLabel(homeCard,"ShiBuHub v2.3.2",22,true)
+hl=textLabel(homeCard,"ShiBuHub v2.3.3",22,true)
 hl.Position=UDim2.fromOffset(18,16); hl.Size=UDim2.new(1,-36,0,32); hl.TextColor3=C.CYAN
 h2=textLabel(homeCard,"Egg farming engine + Hungry Monster monitor",13,false)
 h2.Position=UDim2.fromOffset(18,54); h2.Size=UDim2.new(1,-36,0,24); h2.TextColor3=C.MUTED
@@ -2310,7 +2310,7 @@ whTest=button(whCard,"SAVE + TEST")
 whTest.Size=UDim2.new(1,-32,0,42); whTest.Position=UDim2.fromOffset(16,108)
 whTest.MouseButton1Click:Connect(function()
     Config.WebhookUrl=whBox.Text
-    local ok,why=sendWebhook("ShiBuHub connected","Webhook test from ShiBuHub v2.3.2")
+    local ok,why=sendWebhook("ShiBuHub connected","Webhook test from ShiBuHub v2.3.3")
     whTest.Text=ok and "✓ TEST SENT" or ("FAILED • "..tostring(why))
 end)
 
@@ -2330,7 +2330,7 @@ end)
 --====================================================
 
 pageHeader(Settings,"SETTINGS","Performance and session options")
-_,_,getAnti=toggleRow(Settings,80,"Anti AFK (disabled)","VirtualUser removed after BAC isolation",false,function(v) Config.AntiAFK=v end)
+_,_,getAnti=toggleRow(Settings,80,"Anti AFK (disabled)","VirtualUser/Idled removed",false,function(v) Config.AntiAFK=false end)
 _,_,getFPS=toggleRow(Settings,158,"Low FPS Mode","Reduce graphics and cap FPS to 15",false,function(v)
     Config.FPSBoost=v
     if v then
@@ -2455,8 +2455,8 @@ end
 --====================================================
 -- LOOPS
 --====================================================
-end
-end)
+
+-- Anti-AFK via VirtualUser/Idled was intentionally removed.
 
 -- Auto rejoin watcher
 pcall(function()
@@ -2740,7 +2740,7 @@ end)
 
 setPage("EGGS")
 LastAction="Passive boot • VirtualUser/Idled removed"
-print("[ShiBuHub] v2.3.2 NO VIRTUALUSER loaded")
+print("[ShiBuHub] v2.3.3 COMPILE FIX loaded")
 
 
 pcall(function()

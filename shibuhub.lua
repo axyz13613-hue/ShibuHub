@@ -1,5 +1,5 @@
 --[[
-    ShiBuHub v2.3.0 SINGLE SCHEDULER
+    ShiBuHub v2.3.1 PASSIVE BOOT
     Immediate loading screen -> protected compile/run -> menu.
     If initialization fails, the loading panel shows the exact error instead of silently disappearing.
 ]]
@@ -72,7 +72,7 @@ version.Font=Enum.Font.Gotham
 version.TextSize=12
 version.TextColor3=Color3.fromRGB(142,176,192)
 version.TextXAlignment=Enum.TextXAlignment.Left
-version.Text="v2.3.0 • Monster Auto Feed"
+version.Text="v2.3.1 • Monster Auto Feed"
 version.ZIndex=5002
 version.Parent=card
 
@@ -149,7 +149,7 @@ task.wait(.03)
 
 local SOURCE = [======[
 --[[
-    ShiBuHub v2.3.0 • TREADMILL + MONSTER AUTO FEED
+    ShiBuHub v2.3.1 • TREADMILL + MONSTER AUTO FEED
     Steal An Egg • Delta X Mobile
     - Embedded ShiBuHub logo
     - Cyan/teal cloud-tech UI
@@ -170,7 +170,7 @@ local TeleportService = game:GetService("TeleportService")
 local VirtualUser = game:GetService("VirtualUser")
 
 local LocalPlayer = Players.LocalPlayer
-local G = getgenv and getgenv() or _G
+local G = _G
 G.ShiBuHubRunId = tostring(os.clock()) .. tostring(math.random(1000,9999))
 local RUN_ID = G.ShiBuHubRunId
 
@@ -283,17 +283,10 @@ end
 -- GUI ROOT
 --====================================================
 
-local guiParent
-pcall(function()
-    if gethui then guiParent = gethui() end
-end)
-guiParent = guiParent or LocalPlayer:WaitForChild("PlayerGui")
-
-for _, p in ipairs({guiParent, CoreGui, LocalPlayer:FindFirstChild("PlayerGui")}) do
-    if p then
-        local old = p:FindFirstChild("ShiBuHub")
-        if old then pcall(function() old:Destroy() end) end
-    end
+local guiParent = LocalPlayer:WaitForChild("PlayerGui")
+do
+    local old = guiParent:FindFirstChild("ShiBuHub")
+    if old then pcall(function() old:Destroy() end) end
 end
 
 local Gui = Instance.new("ScreenGui")
@@ -418,16 +411,8 @@ corner(Bubble, 31)
 stroke(Bubble, C.CYAN, 2, .05)
 if not LOGO_ASSET then Bubble.Image="" end
 
--- Load the embedded logo after the menu is already visible.
-task.spawn(function()
-    local ok,asset=pcall(getLogoAsset)
-    if ok and asset then
-        LOGO_ASSET=asset
-        pcall(function() logo.Image=asset end)
-        pcall(function() miniLogo.Image=asset end)
-        pcall(function() Bubble.Image=asset end)
-    end
-end)
+-- Passive boot: embedded logo asset I/O is deferred/disabled on startup.
+-- The menu still works without writing files or registering a custom asset.
 
 --====================================================
 -- PAGES / NAV
@@ -558,17 +543,17 @@ end
 
 local Config = {
     AutoSteal = false,
-    PersistentSteal = true,
-    PreventTraps = true,
-    AutoReturnBase = true,
+    PersistentSteal = false,
+    PreventTraps = false,
+    AutoReturnBase = false,
     FastStepSpeed = 0,
     FastStepStopDistance = 5.5,
-    EvasiveRun = true,
+    EvasiveRun = false,
     AvoidNPCDistance = 26,
     AvoidNPCStrength = 18,
-    AntiAFK = true,
+    AntiAFK = false,
     FPSBoost = false,
-    AutoRejoin = true,
+    AutoRejoin = false,
     EggESP = false,
     AutoHatch = false,
     AutoCollectAway = false,
@@ -577,10 +562,10 @@ local Config = {
     AutoTreadmill = false,
     AutoUpgradeTreadmill = false,
     AutoSellSatchel = false,
-    PriorityHungryMonster = true,
+    PriorityHungryMonster = false,
     AutoFeedMonster = false,
     AutoClaimMonsterChests = false,
-    EventReturnBase = true,
+    EventReturnBase = false,
     EventFeedTargets = {
         Common=true,
         Uncommon=true,
@@ -593,7 +578,7 @@ local Config = {
         Divine=false,
         Eternal=false,
     },
-    ProtectSelectedRarities = true,
+    ProtectSelectedRarities = false,
     WebhookEnabled = false,
     WebhookUrl = "",
     NotifyTargetFound = false,
@@ -749,7 +734,7 @@ local function sendWebhook(title, description)
         embeds={{
             title=tostring(title),
             description=tostring(description),
-            footer={text="ShiBuHub v2.3.0"},
+            footer={text="ShiBuHub v2.3.1"},
             timestamp=DateTime.now():ToIsoDate(),
         }}
     })
@@ -1532,7 +1517,7 @@ end
 
 pageHeader(Home,"ShiBuHub Dashboard","Cloud-tech themed build • branded edition")
 homeCard=card(Home,80,180)
-hl=textLabel(homeCard,"ShiBuHub v2.3.0",22,true)
+hl=textLabel(homeCard,"ShiBuHub v2.3.1",22,true)
 hl.Position=UDim2.fromOffset(18,16); hl.Size=UDim2.new(1,-36,0,32); hl.TextColor3=C.CYAN
 h2=textLabel(homeCard,"Egg farming engine + Hungry Monster monitor",13,false)
 h2.Position=UDim2.fromOffset(18,54); h2.Size=UDim2.new(1,-36,0,24); h2.TextColor3=C.MUTED
@@ -2131,11 +2116,11 @@ _,_,getAutoFeedMonster=toggleRow(Event,402,"Auto Feed Hungry Monster","Pick allo
     Config.AutoFeedMonster=v
 end)
 
-_,_,getPriorityMonster=toggleRow(Event,480,"Priority Hungry Monster","Pause normal Auto-Steal while event Auto Feed is working",true,function(v)
+_,_,getPriorityMonster=toggleRow(Event,480,"Priority Hungry Monster","Pause normal Auto-Steal while event Auto Feed is working",false,function(v)
     Config.PriorityHungryMonster=v
 end)
 
-_,_,getProtectEvent=toggleRow(Event,558,"Protect Rarities","Never feed rarities selected in the EGGS rarity picker",true,function(v)
+_,_,getProtectEvent=toggleRow(Event,558,"Protect Rarities","Never feed rarities selected in the EGGS rarity picker",false,function(v)
     Config.ProtectSelectedRarities=v
 end)
 
@@ -2327,7 +2312,7 @@ whTest=button(whCard,"SAVE + TEST")
 whTest.Size=UDim2.new(1,-32,0,42); whTest.Position=UDim2.fromOffset(16,108)
 whTest.MouseButton1Click:Connect(function()
     Config.WebhookUrl=whBox.Text
-    local ok,why=sendWebhook("ShiBuHub connected","Webhook test from ShiBuHub v2.3.0")
+    local ok,why=sendWebhook("ShiBuHub connected","Webhook test from ShiBuHub v2.3.1")
     whTest.Text=ok and "✓ TEST SENT" or ("FAILED • "..tostring(why))
 end)
 
@@ -2347,7 +2332,7 @@ end)
 --====================================================
 
 pageHeader(Settings,"SETTINGS","Performance and session options")
-_,_,getAnti=toggleRow(Settings,80,"Anti AFK","Prevent idle disconnect",true,function(v) Config.AntiAFK=v end)
+_,_,getAnti=toggleRow(Settings,80,"Anti AFK","Prevent idle disconnect",false,function(v) Config.AntiAFK=v end)
 _,_,getFPS=toggleRow(Settings,158,"Low FPS Mode","Reduce graphics and cap FPS to 15",false,function(v)
     Config.FPSBoost=v
     if v then
@@ -2360,7 +2345,7 @@ _,_,getFPS=toggleRow(Settings,158,"Low FPS Mode","Reduce graphics and cap FPS to
         if setfpscap then pcall(setfpscap,60) end
     end
 end)
-_,_,getRejoin=toggleRow(Settings,236,"Auto Rejoin","Rejoin after Roblox disconnect prompt",true,function(v) Config.AutoRejoin=v end)
+_,_,getRejoin=toggleRow(Settings,236,"Auto Rejoin","Rejoin after Roblox disconnect prompt",false,function(v) Config.AutoRejoin=v end)
 
 movementCard=card(Settings,314,116)
 mv1=textLabel(movementCard,"MOVEMENT",14,true)
@@ -2764,13 +2749,12 @@ task.spawn(function()
 end)
 
 setPage("EGGS")
-refreshMonsterState()
-print("[ShiBuHub] v2.3.0 SINGLE SCHEDULER loaded")
+LastAction="Passive boot • no server request sent"
+print("[ShiBuHub] v2.3.1 PASSIVE BOOT loaded")
 
 
 pcall(function()
-    local env=getgenv and getgenv() or _G
-    env.ShiBuHubReady=true
+    _G.ShiBuHubReady=true
 end)
 
 ]======]

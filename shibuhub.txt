@@ -1,0 +1,622 @@
+-- =============================================
+-- EGG STEALER DELUXE – FULL FEATURE
+-- Delta compatible | No Tween | No Writefile
+-- =============================================
+print("🚀 Loading Egg Stealer Deluxe...")
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local PathfindingService = game:GetService("PathfindingService")
+local TeleportService = game:GetService("TeleportService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local LocalPlayer = Players.LocalPlayer
+
+-- ===== CONFIG =====
+local Config = {
+    AutoSteal = false,
+    TeleportReturn = false,
+    AutoFeedMonster = false,
+    AutoClaimChest = false,
+    BaseCF = nil,
+    RarityTargets = {Legendary=true, Mythic=true, Cosmic=true, Secret=true, Divine=true, Eternal=true},
+    FeedRarities = {Rare=true, Epic=true, Legendary=true},
+    ProtectRarities = false,
+}
+
+-- ===== REMOTE DETECTION =====
+local Remote = {}
+local function findRemotes()
+    print("🔍 Tìm remote...")
+    local net = ReplicatedStorage:FindFirstChild("Packages") and ReplicatedStorage.Packages:FindFirstChild("Networking")
+    if net then
+        Remote.EggSnapshot = net:FindFirstChild("RF/EggWorld/AskFieldEggSnapshot")
+        Remote.MonsterSnapshot = net:FindFirstChild("RF/MonsterParasite/AskSnapshot")
+        Remote.MonsterFeed = net:FindFirstChild("RF/MonsterParasite/AskFeed")
+        Remote.MonsterChestTake = net:FindFirstChild("RF/MonsterParasite/AskChestTake")
+        Remote.MonsterChestClaim = net:FindFirstChild("RF/MonsterParasite/AskChestClaim")
+        Remote.Hatch = net:FindFirstChild("RF/EggWorld/AskHatch")
+        Remote.HatchFinish = net:FindFirstChild("RF/EggWorld/AskFinishHatch")
+        Remote.SatchelSale = net:FindFirstChild("RF/Haul/OfferFullSatchelSale")
+        Remote.PlotState = net:FindFirstChild("RF/Homestead/AskState")
+        print("✅ Remote tìm thấy qua Networking")
+    else
+        for _, child in ipairs(ReplicatedStorage:GetDescendants()) do
+            if child:IsA("RemoteFunction") or child:IsA("RemoteEvent") then
+                local name = child.Name
+                if name:find("AskFieldEggSnapshot") then Remote.EggSnapshot = child end
+                if name:find("AskSnapshot") and child.Parent and child.Parent.Name:find("Monster") then Remote.MonsterSnapshot = child end
+                if name:find("AskFeed") and child.Parent and child.Parent.Name:find("Monster") then Remote.MonsterFeed = child end
+                if name:find("AskChestTake") then Remote.MonsterChestTake = child end
+                if name:find("AskChestClaim") then Remote.MonsterChestClaim = child end
+            end
+        end
+        print("✅ Remote tìm thấy qua fallback")
+    end
+    print("  EggSnapshot:", Remote.EggSnapshot and "OK" or "MISSING")
+    print("  MonsterSnapshot:", Remote.MonsterSnapshot and "OK" or "MISSING")
+end
+findRemotes()
+
+-- ===== HELPER =====
+local function invoke(remote, ...)
+    if not remote then return false end
+    local ok, res = pcall(remote.InvokeServer, remote, ...)
+    return ok and res
+end
+
+local function getChar()
+    local c = LocalPlayer.Character
+    if not c or not c.Parent then return nil, nil end
+    return c, c:FindFirstChild("HumanoidRootPart")
+end
+
+local function getRarity(rec)
+    return rec.Rarity or rec.RarityName or rec.Tier
+end
+
+local function readEggs()
+    if not Remote.EggSnapshot then return {} end
+    local ok, snap = pcall(Remote.EggSnapshot.InvokeServer, Remote.EggSnapshot)
+    if not ok or type(snap) ~= "table" then return {} end
+    local eggs = {}
+    local function collect(t)
+        if type(t) ~= "table" then return end
+        if t.Uid and (t.State == "Slot" or t.State == "Dropped" or t.State == nil) then
+            table.insert(eggs, t)
+        end
+        for _, v in pairs(t) do if type(v) == "table" then collect(v) end end
+    end
+    collect(snap)
+    return eggs
+end
+
+-- ===== TELEPORT =====
+local function teleportTo(pos)
+    local _, root = getChar()
+    if not root then return false end
+    local current = root.Position
+    local dist = (pos - current).Magnitude
+    if dist < 5 then return true end
+    local steps = math.ceil(dist / 20)
+    for i = 1, steps do
+        local p = current + (pos - current) / steps * i
+        p = p + Vector3.new((math.random()-0.5)*1.5, 0, (math.random()-0.5)*1.5)
+        root.CFrame = CFrame.new(p)
+        task.wait(0.06)
+    end
+    root.CFrame = CFrame.new(pos)
+    return true
+end
+
+-- ===== WALK =====
+local function walkTo(pos, stopDist, timeout)
+    stopDist = stopDist or 5.5
+    timeout = timeout or 25
+    local char, root = getChar()
+    if not char or not root then return false end
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if not hum then return false end
+
+    if (root.Position - pos).Magnitude <= stopDist then return true end
+
+    local start = os.clock()
+    local lastPos = root.Position
+    local stuck = 0
+
+    while os.clock() - start < timeout do
+        if not root.Parent or hum.Health <= 0 then return false end
+        if (root.Position - pos).Magnitude <= stopDist then
+            hum:MoveTo(root.Position)
+            return true
+        end
+        local moved = (root.Position - lastPos).Magnitude
+        if moved < 0.8 then stuck = stuck + 1 else stuck = 0 end
+        lastPos = root.Position
+
+        if stuck >= 3 then
+            local path = PathfindingService:CreatePath({AgentRadius=2, AgentHeight=5, AgentCanJump=true})
+            local ok = pcall(function() path:ComputeAsync(root.Position, pos) end)
+            if ok and path.Status == Enum.PathStatus.Success then
+                local waypoints = path:GetWaypoints()
+                if #waypoints > 0 then
+                    for _, wp in ipairs(waypoints) do
+                        if (root.Position - pos).Magnitude <= stopDist then break end
+                        hum:MoveTo(wp.Position)
+                        if wp.Action == Enum.PathWaypointAction.Jump then hum.Jump = true end
+                        task.wait(0.1)
+                    end
+                    stuck = 0
+                end
+            end
+        else
+            hum:MoveTo(pos)
+        end
+        task.wait(0.1)
+    end
+    return false
+end
+
+-- ===== FIND PROMPT =====
+local function findPrompt(uid)
+    local smart = workspace:FindFirstChild("SmartPromptPart")
+    if smart then
+        for _, d in ipairs(smart:GetDescendants()) do
+            if d:IsA("ProximityPrompt") and d.Name:find("CarryAreaEgg") then
+                return d
+            end
+        end
+    end
+    local obj = workspace:FindFirstChild("AreaEggSlotsClient") and workspace.AreaEggSlotsClient:FindFirstChild(tostring(uid), true)
+    if obj then
+        for _, d in ipairs(obj:GetDescendants()) do
+            if d:IsA("ProximityPrompt") then return d end
+        end
+    end
+    return nil
+end
+
+local function triggerPrompt(prompt)
+    if not prompt then return false end
+    local ok = pcall(function()
+        if fireproximityprompt then
+            fireproximityprompt(prompt)
+        else
+            prompt:InputHoldBegin()
+            task.wait(0.3)
+            prompt:InputHoldEnd()
+        end
+    end)
+    return ok
+end
+
+-- ===== STEAL EGG =====
+local function stealEgg()
+    if not Remote.EggSnapshot then
+        print("❌ Remote.EggSnapshot missing")
+        return false
+    end
+    local eggs = readEggs()
+    local targets = {}
+    for _, e in ipairs(eggs) do
+        local r = getRarity(e)
+        if r and Config.RarityTargets[r] then
+            table.insert(targets, e)
+        end
+    end
+    if #targets == 0 then
+        print("⏳ No target eggs")
+        return false
+    end
+    local _, root = getChar()
+    if not root then return false end
+    table.sort(targets, function(a,b)
+        local da = (root.Position - (a.CFrame and a.CFrame.Position or Vector3.new(0,0,0))).Magnitude
+        local db = (root.Position - (b.CFrame and b.CFrame.Position or Vector3.new(0,0,0))).Magnitude
+        return da < db
+    end)
+    local target = targets[1]
+    local uid = target.Uid
+    local rarity = getRarity(target) or "Unknown"
+    print("🎯 Target:", rarity, uid)
+
+    local pos = target.CFrame and target.CFrame.Position or target.Position
+    if not pos then
+        local obj = workspace:FindFirstChild("AreaEggSlotsClient") and workspace.AreaEggSlotsClient:FindFirstChild(tostring(uid), true)
+        if obj then
+            local part = obj:FindFirstChildWhichIsA("BasePart")
+            if part then pos = part.Position end
+        end
+    end
+    if not pos then
+        print("❌ Cannot get position")
+        return false
+    end
+
+    print("🚶 Walking to egg...")
+    if not walkTo(pos, 6, 25) then
+        print("❌ Failed to reach")
+        return false
+    end
+
+    local prompt = findPrompt(uid)
+    if not prompt then
+        task.wait(0.5)
+        prompt = findPrompt(uid)
+    end
+    if not prompt then
+        print("❌ No steal prompt")
+        return false
+    end
+
+    print("⚡ Stealing...")
+    if not triggerPrompt(prompt) then
+        print("❌ Prompt failed")
+        return false
+    end
+    task.wait(0.8)
+
+    local still = readEggs()
+    for _, e in ipairs(still) do
+        if e.Uid == uid then
+            print("⚠️ Retry...")
+            prompt = findPrompt(uid)
+            if prompt then
+                triggerPrompt(prompt)
+                task.wait(0.8)
+            end
+            still = readEggs()
+            for _, e2 in ipairs(still) do
+                if e2.Uid == uid then
+                    print("❌ Steal failed")
+                    return false
+                end
+            end
+        end
+    end
+
+    print("✅ Stolen", rarity)
+
+    if Config.TeleportReturn and Config.BaseCF then
+        print("⚡ Teleporting to base...")
+        teleportTo(Config.BaseCF.Position)
+    end
+
+    return true
+end
+
+-- ===== MONSTER FEED =====
+local function getMonster()
+    local folder = workspace:FindFirstChild("MonsterParasiteMonsters")
+    if not folder then return nil end
+    for _, m in ipairs(folder:GetChildren()) do
+        if m:IsA("Model") then
+            local owner = m:GetAttribute("OwnerUserId")
+            if tonumber(owner) == LocalPlayer.UserId then
+                return m
+            end
+        end
+    end
+    return nil
+end
+
+local function getMonsterPosition()
+    local m = getMonster()
+    if not m then return nil end
+    local part = m:FindFirstChild("HumanoidRootPart") or m:FindFirstChild("RootPart") or m.PrimaryPart
+    if part then return part.Position end
+    return nil
+end
+
+local function feedMonster()
+    if not Remote.MonsterSnapshot or not Remote.MonsterFeed then
+        print("❌ Monster remote missing")
+        return false
+    end
+    local snap = invoke(Remote.MonsterSnapshot)
+    if not snap or not snap.Event or not snap.Event.Active then
+        print("⏳ Monster not active")
+        return false
+    end
+
+    local eggs = readEggs()
+    local candidate = nil
+    for _, e in ipairs(eggs) do
+        local r = getRarity(e)
+        if r and Config.FeedRarities[r] then
+            if Config.ProtectRarities and Config.RarityTargets[r] then
+                -- skip protected
+            else
+                candidate = e
+                break
+            end
+        end
+    end
+    if not candidate then
+        print("⏳ No feed egg")
+        return false
+    end
+
+    local uid = candidate.Uid
+    local pos = candidate.CFrame and candidate.CFrame.Position or candidate.Position
+    if not pos then
+        local obj = workspace:FindFirstChild("AreaEggSlotsClient") and workspace.AreaEggSlotsClient:FindFirstChild(tostring(uid), true)
+        if obj then
+            local part = obj:FindFirstChildWhichIsA("BasePart")
+            if part then pos = part.Position end
+        end
+    end
+    if not pos then return false end
+
+    if not walkTo(pos, 6, 20) then return false end
+    local prompt = findPrompt(uid)
+    if not prompt then task.wait(0.5); prompt = findPrompt(uid) end
+    if not prompt then return false end
+    triggerPrompt(prompt)
+    task.wait(0.8)
+    local still = readEggs()
+    for _, e in ipairs(still) do if e.Uid == uid then return false end end
+
+    local monsterPos = getMonsterPosition()
+    if not monsterPos then
+        print("❌ Monster position not found")
+        return false
+    end
+    if not walkTo(monsterPos, 8, 20) then return false end
+
+    local ok, res = pcall(Remote.MonsterFeed.InvokeServer, Remote.MonsterFeed)
+    if not ok then
+        print("❌ Feed error")
+        return false
+    end
+    if type(res) == "table" and res.Success then
+        print("✅ Fed monster")
+        return true
+    else
+        print("❌ Feed failed:", res and res.Message or "unknown")
+        return false
+    end
+end
+
+-- ===== CLAIM CHEST =====
+local function claimChest()
+    if not Remote.MonsterChestTake or not Remote.MonsterChestClaim then
+        print("❌ Chest remote missing")
+        return false
+    end
+    local okTake = invoke(Remote.MonsterChestTake)
+    if not okTake or type(okTake) ~= "table" or not okTake.Success then
+        print("❌ Take chest failed")
+        return false
+    end
+    task.wait(2.5)
+    local okClaim = invoke(Remote.MonsterChestClaim)
+    if okClaim and type(okClaim) == "table" and okClaim.Success then
+        print("✅ Chest claimed")
+        return true
+    end
+    print("❌ Claim failed")
+    return false
+end
+
+-- ===== ANTI AFK =====
+local function startAntiAFK()
+    local vu = game:GetService("VirtualUser")
+    if vu and vu.CaptureController and vu.ClickButton2 then
+        LocalPlayer.Idled:Connect(function()
+            vu:CaptureController()
+            vu:ClickButton2(Vector2.new())
+            print("🔄 Anti-AFK (VirtualUser)")
+        end)
+    else
+        task.spawn(function()
+            while task.wait(45) do
+                local pos = UserInputService:GetMouseLocation()
+                UserInputService:MoveMouse(pos.X + math.random(-3,3), pos.Y + math.random(-3,3))
+                print("🔄 Anti-AFK (MouseMove)")
+            end
+        end)
+    end
+end
+
+local function startAntiKick()
+    game:OnTeleport(function(state)
+        if state == Enum.TeleportState.Teleporting then
+            task.wait(3)
+            print("🔄 Rejoining after teleport...")
+            TeleportService:Teleport(game.PlaceId, LocalPlayer)
+        end
+    end)
+end
+
+-- ===== UI =====
+local function createUI()
+    print("🖥️ Creating UI...")
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "EggStealerDeluxe"
+    gui.ResetOnSpawn = false
+    gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+    local main = Instance.new("Frame")
+    main.Size = UDim2.fromOffset(300, 420)
+    main.Position = UDim2.new(0.5, -150, 0.5, -210)
+    main.BackgroundColor3 = Color3.fromRGB(10, 20, 30)
+    main.BorderSizePixel = 0
+    main.Parent = gui
+    local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0, 12); c.Parent = main
+    local s = Instance.new("UIStroke"); s.Color = Color3.fromRGB(0,200,180); s.Thickness = 1.5; s.Parent = main
+
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1,0,0,30)
+    title.BackgroundTransparency = 1
+    title.Text = "🥚 Egg Stealer Deluxe"
+    title.TextColor3 = Color3.fromRGB(0,220,200)
+    title.Font = Enum.Font.GothamBold
+    title.TextSize = 16
+    title.Parent = main
+
+    -- Rarity picker
+    local function createRarityPicker(parent, y, titleText, configTable)
+        local frame = Instance.new("Frame")
+        frame.Size = UDim2.new(1, -16, 0, 170)
+        frame.Position = UDim2.fromOffset(8, y)
+        frame.BackgroundColor3 = Color3.fromRGB(15, 35, 50)
+        frame.BorderSizePixel = 0
+        frame.Parent = parent
+        local fc = Instance.new("UICorner"); fc.CornerRadius = UDim.new(0, 8); fc.Parent = frame
+
+        local lbl = Instance.new("TextLabel")
+        lbl.Size = UDim2.new(1, -10, 0, 22)
+        lbl.Position = UDim2.fromOffset(5, 4)
+        lbl.BackgroundTransparency = 1
+        lbl.Text = titleText
+        lbl.TextColor3 = Color3.fromRGB(0, 200, 180)
+        lbl.Font = Enum.Font.GothamBold
+        lbl.TextSize = 12
+        lbl.TextXAlignment = Enum.TextXAlignment.Left
+        lbl.Parent = frame
+
+        local list = Instance.new("Frame")
+        list.Size = UDim2.new(1, -10, 1, -32)
+        list.Position = UDim2.fromOffset(5, 30)
+        list.BackgroundTransparency = 1
+        list.Parent = frame
+        local layout = Instance.new("UIListLayout")
+        layout.FillDirection = Enum.FillDirection.Horizontal
+        layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+        layout.VerticalAlignment = Enum.VerticalAlignment.Center
+        layout.Padding = UDim.new(0, 4)
+        layout.Wrap = true
+        layout.Parent = list
+
+        local rarities = {"Common","Uncommon","Rare","Epic","Legendary","Mythic","Cosmic","Secret","Divine","Eternal"}
+        for _, r in ipairs(rarities) do
+            local btn = Instance.new("TextButton")
+            btn.Size = UDim2.fromOffset(52, 26)
+            btn.Text = r:sub(1,4)
+            local state = configTable[r] == true
+            btn.BackgroundColor3 = state and Color3.fromRGB(0, 180, 160) or Color3.fromRGB(30, 50, 60)
+            btn.TextColor3 = state and Color3.fromRGB(255,255,255) or Color3.fromRGB(180,210,210)
+            btn.Font = Enum.Font.Gotham
+            btn.TextSize = 9
+            btn.BorderSizePixel = 0
+            btn.Parent = list
+            local bc = Instance.new("UICorner"); bc.CornerRadius = UDim.new(0, 6); bc.Parent = btn
+            btn.MouseButton1Click:Connect(function()
+                configTable[r] = not configTable[r]
+                btn.BackgroundColor3 = configTable[r] and Color3.fromRGB(0, 180, 160) or Color3.fromRGB(30, 50, 60)
+                btn.TextColor3 = configTable[r] and Color3.fromRGB(255,255,255) or Color3.fromRGB(180,210,210)
+            end)
+        end
+    end
+
+    createRarityPicker(main, 38, "🎯 Rarity Steal", Config.RarityTargets)
+    createRarityPicker(main, 218, "🍖 Rarity Feed", Config.FeedRarities)
+
+    -- Toggle buttons
+    local function makeToggle(y, label, initial, callback)
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(1, -20, 0, 34)
+        btn.Position = UDim2.fromOffset(10, y)
+        btn.Text = label
+        btn.BackgroundColor3 = initial and Color3.fromRGB(0, 150, 130) or Color3.fromRGB(30, 50, 60)
+        btn.TextColor3 = initial and Color3.fromRGB(255,255,255) or Color3.fromRGB(200,220,220)
+        btn.Font = Enum.Font.Gotham
+        btn.TextSize = 13
+        btn.Parent = main
+        local bc = Instance.new("UICorner"); bc.CornerRadius = UDim.new(0, 8); bc.Parent = btn
+        local state = initial
+        btn.MouseButton1Click:Connect(function()
+            state = not state
+            btn.BackgroundColor3 = state and Color3.fromRGB(0, 150, 130) or Color3.fromRGB(30, 50, 60)
+            btn.TextColor3 = state and Color3.fromRGB(255,255,255) or Color3.fromRGB(200,220,220)
+            callback(state)
+        end)
+        return btn, function() return state end
+    end
+
+    local stealBtn, getSteal = makeToggle(394, "▶ Auto Steal", false, function(v) Config.AutoSteal = v end)
+    local teleBtn, getTele = makeToggle(434, "🔁 Teleport Return", false, function(v) Config.TeleportReturn = v end)
+    local feedBtn, getFeed = makeToggle(474, "🍖 Auto Feed Monster", false, function(v) Config.AutoFeedMonster = v end)
+    local chestBtn, getChest = makeToggle(514, "📦 Auto Claim Chest", false, function(v) Config.AutoClaimChest = v end)
+
+    -- Save base
+    local saveBase = Instance.new("TextButton")
+    saveBase.Size = UDim2.new(1, -20, 0, 30)
+    saveBase.Position = UDim2.fromOffset(10, 554)
+    saveBase.Text = "📍 Save Base Here"
+    saveBase.BackgroundColor3 = Color3.fromRGB(40, 60, 80)
+    saveBase.TextColor3 = Color3.fromRGB(200,230,230)
+    saveBase.Font = Enum.Font.Gotham
+    saveBase.TextSize = 12
+    saveBase.Parent = main
+    local bc3 = Instance.new("UICorner"); bc3.CornerRadius = UDim.new(0, 8); bc3.Parent = saveBase
+    saveBase.MouseButton1Click:Connect(function()
+        local _, root = getChar()
+        if root then
+            Config.BaseCF = root.CFrame
+            saveBase.Text = "✅ Base Saved!"
+            task.wait(1)
+            saveBase.Text = "📍 Save Base Here"
+            print("Base saved at", root.Position)
+        end
+    end)
+
+    -- Status label
+    local status = Instance.new("TextLabel")
+    status.Size = UDim2.new(1, -20, 0, 24)
+    status.Position = UDim2.fromOffset(10, 592)
+    status.BackgroundTransparency = 1
+    status.Text = "Status: Idle"
+    status.TextColor3 = Color3.fromRGB(180, 210, 210)
+    status.Font = Enum.Font.Gotham
+    status.TextSize = 12
+    status.TextXAlignment = Enum.TextXAlignment.Left
+    status.Parent = main
+
+    return gui, status
+end
+
+-- ===== MAIN LOOP =====
+local function start()
+    print("🔄 Starting...")
+    startAntiKick()
+    startAntiAFK()
+
+    local gui, statusLabel = createUI()
+
+    task.spawn(function()
+        while gui and gui.Parent do
+            task.wait(0.5)
+            local msg = "Idle"
+            if Config.AutoSteal then
+                msg = "Stealing..."
+                stealEgg()
+                task.wait(2)
+            end
+            if Config.AutoFeedMonster then
+                msg = "Feeding..."
+                feedMonster()
+                task.wait(3)
+            end
+            if Config.AutoClaimChest then
+                msg = "Claiming chest..."
+                claimChest()
+                task.wait(4)
+            end
+            statusLabel.Text = "Status: " .. msg
+        end
+    end)
+
+    print("✅ Egg Stealer Deluxe ready!")
+end
+
+-- Run
+local success, err = xpcall(start, function(e)
+    print("❌ ERROR:", e)
+    print(debug and debug.traceback and debug.traceback() or "")
+end)
+
+if not success then
+    print("❌ Start failed:", err)
+end

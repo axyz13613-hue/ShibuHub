@@ -1,5 +1,5 @@
 --[[
-    ShiBuHub v2.3.5 SAFE FAST MOVE
+    ShiBuHub v2.3.6 PICKUP FIX
     Immediate loading screen -> protected compile/run -> menu.
     If initialization fails, the loading panel shows the exact error instead of silently disappearing.
 ]]
@@ -72,7 +72,7 @@ version.Font=Enum.Font.Gotham
 version.TextSize=12
 version.TextColor3=Color3.fromRGB(142,176,192)
 version.TextXAlignment=Enum.TextXAlignment.Left
-version.Text="v2.3.5 • Monster Auto Feed"
+version.Text="v2.3.6 • Monster Auto Feed"
 version.ZIndex=5002
 version.Parent=card
 
@@ -149,7 +149,7 @@ task.wait(.03)
 
 local SOURCE = [======[
 --[[
-    ShiBuHub v2.3.5 • TREADMILL + MONSTER AUTO FEED
+    ShiBuHub v2.3.6 • TREADMILL + MONSTER AUTO FEED
     Steal An Egg • Delta X Mobile
     - Embedded ShiBuHub logo
     - Cyan/teal cloud-tech UI
@@ -733,7 +733,7 @@ local function sendWebhook(title, description)
         embeds={{
             title=tostring(title),
             description=tostring(description),
-            footer={text="ShiBuHub v2.3.5"},
+            footer={text="ShiBuHub v2.3.6"},
             timestamp=DateTime.now():ToIsoDate(),
         }}
     })
@@ -1065,6 +1065,25 @@ local function triggerPrompt(prompt)
     return ok, ok and "prompt-hold" or "prompt-failed"
 end
 
+local function carryViaServerRecord(record)
+    if not RF_EggCarry or type(record)~="table" then
+        return false,"carry-remote-unavailable"
+    end
+
+    -- Current public implementations of this experience send the complete
+    -- field-egg snapshot record to AskFieldEggCarry.
+    local ok,res=invokeRemote(RF_EggCarry,record)
+    if not ok then
+        return false,tostring(res)
+    end
+
+    if type(res)=="table" and res.Success==false then
+        return false,tostring(res.Message or "server-rejected")
+    end
+
+    return res~=false,"AskFieldEggCarry"
+end
+
 
 local function isPlayerCharacter(model)
     for _,p in ipairs(Players:GetPlayers()) do
@@ -1270,48 +1289,60 @@ local function carryEgg(target)
     LastAction = "Running -> "..target.Rarity
 
     local liveCF=recordCFrame(target.Record) or target.CFrame
-    local reached,why = walkToPosition(liveCF.Position,7,45)
+    local reached,why = walkToPosition(liveCF.Position,5.5,45)
 
     if not reached then
         LastAction="Could not reach "..target.Rarity.." ("..tostring(why)..")"
         return false
     end
 
-    -- Re-resolve once close because SmartPromptPart appears only near the egg.
-    task.wait(.18)
+    -- Resolve again once close. SmartPromptPart is normally only present nearby.
+    task.wait(.10)
     target.Object=eggObject(uid) or target.Object
+
+    local method=nil
     local prompt=findStealPrompt(target)
 
-    if not prompt then
-        LastAction="At "..target.Rarity.." • no Steal prompt found"
-        return false
+    if prompt then
+        LastAction="Stealing "..target.Rarity
+        local ok,promptMethod=triggerPrompt(prompt)
+        if ok then
+            method=promptMethod
+            task.wait(.28)
+        end
     end
 
-    LastAction="Stealing "..target.Rarity
-    local ok,method=triggerPrompt(prompt)
-    if not ok then
-        LastAction="Prompt failed"
-        return false
-    end
-
-    task.wait(.55)
-
-    -- We only use the read snapshot to confirm pickup; no direct carry remote.
+    -- If the prompt path did not register, ask the same game carry RemoteFunction
+    -- using the complete snapshot record. This is NOT used from across the map;
+    -- the character must already have reached the egg first.
     if fieldStillHas(uid)==true then
-        -- One second prompt attempt in case the first tap was too early.
+        local ok,remoteMethod=carryViaServerRecord(target.Record)
+        if ok then
+            method=remoteMethod
+            task.wait(.28)
+        end
+    end
+
+    -- One final nearby prompt retry handles cases where SmartPromptPart appeared
+    -- just after the first lookup.
+    if fieldStillHas(uid)==true then
+        target.Object=eggObject(uid) or target.Object
         local prompt2=findStealPrompt(target)
         if prompt2 then
-            triggerPrompt(prompt2)
-            task.wait(.6)
+            local ok,promptMethod=triggerPrompt(prompt2)
+            if ok then
+                method=method or promptMethod
+                task.wait(.32)
+            end
         end
     end
 
     if fieldStillHas(uid)==true then
-        LastAction="Reached "..target.Rarity.." but pickup did not register"
+        LastAction="At "..target.Rarity.." • pickup rejected/not registered"
         return false
     end
 
-    LastAction="Picked "..target.Rarity.." ("..tostring(method)..")"
+    LastAction="Picked "..target.Rarity.." ("..tostring(method or "confirmed")..")"
 
     if Config.NotifyTargetPicked then
         task.spawn(function()
@@ -1323,23 +1354,16 @@ local function carryEgg(target)
     end
 
     if Config.AutoReturnBase and BaseCF then
-        LastAction="Returning to base with "..target.Rarity
-        local backOk,backWhy = walkToPosition(BaseCF.Position,7,45)
-        if not backOk then
-            LastAction="Picked "..target.Rarity.." • return failed ("..tostring(backWhy)..")"
-            return false
+        local backOk = walkBackToBase()
+        if backOk then
+            LastAction="Back at base • ready for next egg"
+        else
+            LastAction="Picked egg • return base failed"
         end
-
-        -- Wait briefly at base before scanning the next egg.
-        task.wait(.45)
-        LastAction="Back at base • ready for next egg"
-    else
-        LastAction="Picked "..target.Rarity.." • return base disabled"
     end
 
     return true
 end
-
 
 local function pickupEggForEvent(target)
     if not target or not target.CFrame then return false,"bad-target" end
@@ -1536,7 +1560,7 @@ end
 
 pageHeader(Home,"ShiBuHub Dashboard","Cloud-tech themed build • branded edition")
 homeCard=card(Home,80,180)
-hl=textLabel(homeCard,"ShiBuHub v2.3.5",22,true)
+hl=textLabel(homeCard,"ShiBuHub v2.3.6",22,true)
 hl.Position=UDim2.fromOffset(18,16); hl.Size=UDim2.new(1,-36,0,32); hl.TextColor3=C.CYAN
 h2=textLabel(homeCard,"Egg farming engine + Hungry Monster monitor",13,false)
 h2.Position=UDim2.fromOffset(18,54); h2.Size=UDim2.new(1,-36,0,24); h2.TextColor3=C.MUTED
@@ -1559,7 +1583,7 @@ statusText.Position=UDim2.fromOffset(14,31); statusText.Size=UDim2.new(1,-28,0,2
 statusMeta=textLabel(StatusCard,"Scanned: 0   •   Target: None",11,false)
 statusMeta.Position=UDim2.fromOffset(14,63); statusMeta.Size=UDim2.new(1,-28,0,22); statusMeta.TextColor3=C.MUTED
 
-_,setAuto,getAuto=toggleRow(Eggs,190,"Auto-Steal","Run to selected egg, pick it, then return to base",false,function(v)
+_,setAuto,getAuto=toggleRow(Eggs,190,"Auto-Steal","Run to selected rarity, pick using prompt/server fallback, then return",false,function(v)
     if v and not BaseCF then
         local _,root=characterRoot()
         BaseCF=root.CFrame
@@ -2331,7 +2355,7 @@ whTest=button(whCard,"SAVE + TEST")
 whTest.Size=UDim2.new(1,-32,0,42); whTest.Position=UDim2.fromOffset(16,108)
 whTest.MouseButton1Click:Connect(function()
     Config.WebhookUrl=whBox.Text
-    local ok,why=sendWebhook("ShiBuHub connected","Webhook test from ShiBuHub v2.3.5")
+    local ok,why=sendWebhook("ShiBuHub connected","Webhook test from ShiBuHub v2.3.6")
     whTest.Text=ok and "✓ TEST SENT" or ("FAILED • "..tostring(why))
 end)
 
@@ -2765,7 +2789,7 @@ end)
 
 setPage("EGGS")
 LastAction="Passive boot • VirtualUser/Idled removed"
-print("[ShiBuHub] v2.3.5 SAFE FAST MOVE loaded")
+print("[ShiBuHub] v2.3.6 PICKUP FIX loaded")
 
 
 pcall(function()

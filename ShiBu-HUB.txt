@@ -1,0 +1,1051 @@
+-- ==========================================
+--            SHIBU HUB - MAIN SCRIPT
+-- ==========================================
+
+-- 1. CẤU HÌNH & NGÔN NGỮ
+local Config = {
+    Brand = "ShiBu HUB",
+    Colors = {
+        Main = Color3.fromRGB(0, 255, 200), -- Màu xanh ngọc như trong logo
+        Dark = Color3.fromRGB(20, 20, 30),
+        Text = Color3.fromRGB(255, 255, 255),
+        Accent = Color3.fromRGB(0, 160, 160)
+    }
+}
+
+local Translations = {
+    ["vi"] = {
+        title = "ShiBu HUB",
+        subtitle = "Trình quản lý Script",
+        tab_home = "Trang chủ",
+        tab_scripts = "Scripts",
+        tab_settings = "Cài đặt",
+        btn_run = "CHẠY SCRIPT",
+        btn_lang = "Ngôn ngữ",
+        welcome = "Chào mừng bạn đến với ShiBu HUB!",
+        desc = "Chọn một script bên dưới hoặc dán code của bạn vào đây."
+    },
+    ["en"] = {
+        title = "ShiBu HUB",
+        subtitle = "Script Manager",
+        tab_home = "Home",
+        tab_scripts = "Scripts",
+        tab_settings = "Settings",
+        btn_run = "RUN SCRIPT",
+        btn_lang = "Language",
+        welcome = "Welcome to ShiBu HUB!",
+        desc = "Choose a script below or paste your code here."
+    }
+}
+
+local CurrentLang = "vi"
+
+-- 2. TẠO UI / GUI
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "ShiBuHUB"
+ScreenGui.ResetOnSpawn = false
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 500, 0, 350)
+MainFrame.Position = UDim2.new(0.5, -250, 0.5, -175)
+MainFrame.BackgroundColor3 = Config.Colors.Dark
+MainFrame.BorderSizePixel = 3
+MainFrame.BorderColor3 = Config.Colors.Main
+MainFrame.Parent = ScreenGui
+
+-- Header
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 50)
+Title.BackgroundColor3 = Config.Colors.Accent
+Title.Text = "ShiBu HUB"
+Title.TextColor3 = Config.Colors.Text
+Title.TextScaled = true
+Title.Font = Enum.Font.GothamBlack
+Title.Parent = MainFrame
+
+local LangBtn = Instance.new("TextButton")
+LangBtn.Size = UDim2.new(0, 100, 0, 30)
+LangBtn.Position = UDim2.new(1, -110, 0, 10)
+LangBtn.Text = "VI / EN"
+LangBtn.Parent = Title
+
+-- Tabs
+local TabHome = Instance.new("TextButton")
+TabHome.Size = UDim2.new(0, 100, 0, 30)
+TabHome.Position = UDim2.new(0, 10, 0, 60)
+TabHome.Parent = MainFrame
+
+local TabScripts = Instance.new("TextButton")
+TabScripts.Size = UDim2.new(0, 100, 0, 30)
+TabScripts.Position = UDim2.new(0, 120, 0, 60)
+TabScripts.Parent = MainFrame
+
+local TabSettings = Instance.new("TextButton")
+TabSettings.Size = UDim2.new(0, 100, 0, 30)
+TabSettings.Position = UDim2.new(0, 230, 0, 60)
+TabSettings.Parent = MainFrame
+
+-- Khung nội dung
+local ContentFrame = Instance.new("Frame")
+ContentFrame.Size = UDim2.new(1, -20, 1, -110)
+ContentFrame.Position = UDim2.new(0, 10, 0, 100)
+ContentFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+ContentFrame.Parent = MainFrame
+
+local WelcomeText = Instance.new("TextLabel")
+WelcomeText.Size = UDim2.new(1, 0, 0, 50)
+WelcomeText.Text = Translations[CurrentLang].welcome
+WelcomeText.TextColor3 = Config.Colors.Text
+WelcomeText.TextScaled = true
+WelcomeText.Parent = ContentFrame
+
+local DescText = Instance.new("TextLabel")
+DescText.Size = UDim2.new(1, 0, 0, 30)
+DescText.Position = UDim2.new(0, 0, 0, 60)
+DescText.Text = Translations[CurrentLang].desc
+DescText.TextColor3 = Color3.fromRGB(200,200,200)
+DescText.TextScaled = true
+DescText.Parent = ContentFrame
+
+-- Nút chạy script
+local RunBtn = Instance.new("TextButton")
+RunBtn.Size = UDim2.new(0, 150, 0, 40)
+RunBtn.Position = UDim2.new(0.5, -75, 1, -60)
+RunBtn.BackgroundColor3 = Config.Colors.Main
+RunBtn.Text = Translations[CurrentLang].btn_run
+RunBtn.TextColor3 = Color3.fromRGB(0,0,0)
+RunBtn.TextScaled = true
+RunBtn.Parent = ContentFrame
+
+-- 3. HÀM XỬ LÝ NGÔN NGỮ
+local function UpdateLanguage()
+    WelcomeText.Text = Translations[CurrentLang].welcome
+    DescText.Text = Translations[CurrentLang].desc
+    RunBtn.Text = Translations[CurrentLang].btn_run
+    TabHome.Text = Translations[CurrentLang].tab_home
+    TabScripts.Text = Translations[CurrentLang].tab_scripts
+    TabSettings.Text = Translations[CurrentLang].tab_settings
+end
+
+LangBtn.MouseButton1Click:Connect(function()
+    if CurrentLang == "vi" then
+        CurrentLang = "en"
+    else
+        CurrentLang = "vi"
+    end
+    UpdateLanguage()
+end)
+
+-- 4. NHÚNG EGG STEALER PRO V3.1 (CHẠY KHI BẤM NÚT)
+RunBtn.MouseButton1Click:Connect(function()
+    -- ==========================================
+    -- EGG STEALER PRO V3.1 (FULL CODE)
+    -- ==========================================
+
+    local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
+    local TweenService = game:GetService("TweenService")
+    local UserInputService = game:GetService("UserInputService")
+    local PathfindingService = game:GetService("PathfindingService")
+    local HttpService = game:GetService("HttpService")
+    local TeleportService = game:GetService("TeleportService")
+    local CoreGui = game:GetService("CoreGui")
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+    local LocalPlayer = Players.LocalPlayer
+    local G = getgenv() or _G
+    G.EggStealerPro = G.EggStealerPro or {}
+    local S = G.EggStealerPro
+
+    -- Config
+    S.Config = {
+        AutoSteal = false,
+        AutoReturnBase = false,
+        TeleportReturn = false,
+        AutoHatch = false,
+        AutoTreadmill = false,
+        AutoFeedMonster = false,
+        AutoClaimChests = false,
+        AutoUpgradeTreadmill = false,
+        AutoSell = false,
+        EvasiveRun = true,
+        FastMove = true,
+        ProtectRarities = true,
+        WebhookEnabled = false,
+        WebhookUrl = "",
+        BaseCF = nil,
+        StopDistance = 5.5,
+        WalkTimeout = 30,
+        RarityTargets = {Common=false, Uncommon=false, Rare=false, Epic=false, Legendary=true, Mythic=true, Cosmic=true, Secret=true, Divine=true, Eternal=true},
+        FeedRarities = {Common=false, Uncommon=false, Rare=true, Epic=true, Legendary=true, Mythic=false, Cosmic=false, Secret=false, Divine=false, Eternal=false},
+    }
+
+    -- TELEPORT FUNCTION
+    local function teleportToPosition(targetPos)
+        local _, root = getCharacter()
+        if not root then return false end
+        local current = root.Position
+        local dist = (targetPos - current).Magnitude
+        if dist < 5 then return true end
+
+        local steps = math.max(1, math.ceil(dist / 25))
+        local stepVec = (targetPos - current) / steps
+        local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+
+        for i = 1, steps do
+            local pos = current + stepVec * i
+            pos = pos + Vector3.new((math.random() - 0.5) * 1.2, 0, (math.random() - 0.5) * 1.2)
+            local tween = TweenService:Create(root, TweenInfo.new(0.06, Enum.EasingStyle.Linear), {CFrame = CFrame.new(pos)})
+            tween:Play()
+            tween.Completed:Wait()
+            if hum and i % 2 == 0 then
+                hum.Jump = true
+                task.wait(0.02)
+            end
+            task.wait(0.04)
+        end
+        root.CFrame = CFrame.new(targetPos)
+        return true
+    end
+
+    -- UI CREATION
+    local function createGui()
+        local gui = Instance.new("ScreenGui")
+        gui.Name = "EggStealerPro"
+        gui.ResetOnSpawn = false
+        gui.IgnoreGuiInset = true
+        gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+        local main = Instance.new("Frame")
+        main.Size = UDim2.new(0, 420, 0, 540)
+        main.Position = UDim2.new(0.5, -210, 0.5, -270)
+        main.BackgroundColor3 = Color3.fromRGB(15, 20, 30)
+        main.BorderSizePixel = 0
+        main.Parent = gui
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0, 12)
+        corner.Parent = main
+        local stroke = Instance.new("UIStroke")
+        stroke.Color = Color3.fromRGB(0, 180, 255)
+        stroke.Thickness = 1.5
+        stroke.Transparency = 0.3
+        stroke.Parent = main
+
+        local title = Instance.new("TextLabel")
+        title.Size = UDim2.new(1, 0, 0, 40)
+        title.BackgroundTransparency = 1
+        title.Text = "🥚 Egg Stealer Pro"
+        title.TextColor3 = Color3.fromRGB(0, 210, 255)
+        title.Font = Enum.Font.GothamBold
+        title.TextSize = 22
+        title.Parent = main
+
+        local tabs = {"STATUS", "EGGS", "EVENT", "PROGRESS", "SETTINGS"}
+        local tabButtons = {}
+        local tabContainer = Instance.new("Frame")
+        tabContainer.Size = UDim2.new(1, 0, 0, 36)
+        tabContainer.Position = UDim2.new(0, 0, 0, 40)
+        tabContainer.BackgroundTransparency = 1
+        tabContainer.Parent = main
+
+        local function makeTab(name)
+            local btn = Instance.new("TextButton")
+            btn.Size = UDim2.new(1/#tabs, 0, 1, 0)
+            btn.Text = name
+            btn.BackgroundColor3 = Color3.fromRGB(25, 35, 50)
+            btn.TextColor3 = Color3.fromRGB(200, 220, 255)
+            btn.Font = Enum.Font.GothamBold
+            btn.TextSize = 13
+            btn.BorderSizePixel = 0
+            btn.Parent = tabContainer
+            local c = Instance.new("UICorner")
+            c.CornerRadius = UDim.new(0, 4)
+            c.Parent = btn
+            return btn
+        end
+
+        for _, name in ipairs(tabs) do
+            table.insert(tabButtons, makeTab(name))
+        end
+
+        local content = Instance.new("Frame")
+        content.Size = UDim2.new(1, -10, 1, -90)
+        content.Position = UDim2.new(0, 5, 0, 80)
+        content.BackgroundColor3 = Color3.fromRGB(20, 28, 40)
+        content.BorderSizePixel = 0
+        content.Parent = main
+        local c2 = Instance.new("UICorner")
+        c2.CornerRadius = UDim.new(0, 8)
+        c2.Parent = content
+
+        local pages = {}
+        for i = 1, #tabs do
+            local page = Instance.new("ScrollingFrame")
+            page.Size = UDim2.new(1, 0, 1, 0)
+            page.BackgroundTransparency = 1
+            page.ScrollBarThickness = 4
+            page.Visible = (i == 1)
+            page.Parent = content
+            pages[i] = page
+        end
+
+        -- Helper functions
+        local function textLabel(parent, text, size, color, pos, size2)
+            local l = Instance.new("TextLabel")
+            l.Size = size2 or UDim2.new(1, -20, 0, 24)
+            l.Position = pos or UDim2.new(0, 10, 0, 10)
+            l.BackgroundTransparency = 1
+            l.Text = text
+            l.TextColor3 = color or Color3.fromRGB(220, 240, 255)
+            l.Font = Enum.Font.Gotham
+            l.TextSize = size or 14
+            l.TextXAlignment = Enum.TextXAlignment.Left
+            l.Parent = parent
+            return l
+        end
+
+        local function toggleRow(parent, y, title, sub, initial, callback)
+            local f = Instance.new("Frame")
+            f.Size = UDim2.new(1, -20, 0, 60)
+            f.Position = UDim2.new(0, 10, 0, y)
+            f.BackgroundColor3 = Color3.fromRGB(30, 40, 55)
+            f.BorderSizePixel = 0
+            f.Parent = parent
+            local c = Instance.new("UICorner")
+            c.CornerRadius = UDim.new(0, 6)
+            c.Parent = f
+
+            local t = textLabel(f, title, 15, Color3.fromRGB(255,255,255), UDim2.new(0, 12, 0, 6), UDim2.new(1, -80, 0, 22))
+            local s = textLabel(f, sub, 11, Color3.fromRGB(160,180,200), UDim2.new(0, 12, 0, 30), UDim2.new(1, -80, 0, 20))
+
+            local btn = Instance.new("TextButton")
+            btn.Size = UDim2.new(0, 50, 0, 28)
+            btn.Position = UDim2.new(1, -62, 0.5, -14)
+            btn.AutoButtonColor = false
+            btn.Text = ""
+            btn.BorderSizePixel = 0
+            btn.Parent = f
+            local bc = Instance.new("UICorner")
+            bc.CornerRadius = UDim.new(0, 14)
+            bc.Parent = btn
+
+            local knob = Instance.new("Frame")
+            knob.Size = UDim2.new(0, 22, 0, 22)
+            knob.Position = UDim2.new(0, 3, 0, 3)
+            knob.BackgroundColor3 = Color3.fromRGB(255,255,255)
+            knob.BorderSizePixel = 0
+            knob.Parent = btn
+            local kc = Instance.new("UICorner")
+            kc.CornerRadius = UDim.new(0, 11)
+            kc.Parent = knob
+
+            local state = initial or false
+            local function paint()
+                btn.BackgroundColor3 = state and Color3.fromRGB(0, 200, 150) or Color3.fromRGB(60, 70, 85)
+                knob.Position = state and UDim2.new(0, 25, 0, 3) or UDim2.new(0, 3, 0, 3)
+            end
+            paint()
+
+            btn.MouseButton1Click:Connect(function()
+                state = not state
+                paint()
+                if callback then callback(state) end
+            end)
+
+            return f, function(v) state = v; paint() end, function() return state end
+        end
+
+        local pageIndex = 1
+        local pStatus = pages[pageIndex]; pageIndex = pageIndex + 1
+        local pEggs = pages[pageIndex]; pageIndex = pageIndex + 1
+        local pEvent = pages[pageIndex]; pageIndex = pageIndex + 1
+        local pProgress = pages[pageIndex]; pageIndex = pageIndex + 1
+        local pSettings = pages[pageIndex]; pageIndex = pageIndex + 1
+
+        -- STATUS
+        local statusLabel = textLabel(pStatus, "Status: Ready", 16, Color3.fromRGB(0, 255, 200), UDim2.new(0, 10, 0, 10))
+        local targetLabel = textLabel(pStatus, "Target: None", 14, Color3.fromRGB(200,200,255), UDim2.new(0, 10, 0, 40))
+        local statsLabel = textLabel(pStatus, "Scanned: 0 | Picked: 0", 14, Color3.fromRGB(200,200,255), UDim2.new(0, 10, 0, 70))
+
+        -- EGGS
+        local y = 10
+        toggleRow(pEggs, y, "Auto Steal", "Steal target eggs and return", false, function(v) S.Config.AutoSteal = v end)
+        y = y + 70
+        toggleRow(pEggs, y, "Auto Return Base", "Return to saved base after steal", true, function(v) S.Config.AutoReturnBase = v end)
+        y = y + 70
+        toggleRow(pEggs, y, "Evasive Run", "Avoid NPCs while moving", true, function(v) S.Config.EvasiveRun = v end)
+        y = y + 70
+        local rarityBtn = Instance.new("TextButton")
+        rarityBtn.Size = UDim2.new(1, -20, 0, 36)
+        rarityBtn.Position = UDim2.new(0, 10, 0, y)
+        rarityBtn.Text = "Select Rarities"
+        rarityBtn.BackgroundColor3 = Color3.fromRGB(40, 60, 80)
+        rarityBtn.TextColor3 = Color3.fromRGB(220,240,255)
+        rarityBtn.Font = Enum.Font.GothamBold
+        rarityBtn.TextSize = 14
+        rarityBtn.BorderSizePixel = 0
+        rarityBtn.Parent = pEggs
+        local rc = Instance.new("UICorner")
+        rc.CornerRadius = UDim.new(0, 6)
+        rc.Parent = rarityBtn
+
+        -- EVENT
+        y = 10
+        toggleRow(pEvent, y, "Auto Feed Monster", "Pick feed eggs and feed", false, function(v) S.Config.AutoFeedMonster = v end)
+        y = y + 70
+        toggleRow(pEvent, y, "Auto Claim Chests", "Claim monster chests", false, function(v) S.Config.AutoClaimChests = v end)
+        y = y + 70
+        toggleRow(pEvent, y, "Protect Rarities", "Don't feed selected rarities", true, function(v) S.Config.ProtectRarities = v end)
+
+        -- PROGRESS
+        y = 10
+        toggleRow(pProgress, y, "Auto Hatch", "Hatch owned eggs", false, function(v) S.Config.AutoHatch = v end)
+        y = y + 70
+        toggleRow(pProgress, y, "Auto Treadmill", "Train on own treadmill", false, function(v) S.Config.AutoTreadmill = v end)
+        y = y + 70
+        toggleRow(pProgress, y, "Auto Upgrade Treadmill", "Upgrade when possible", false, function(v) S.Config.AutoUpgradeTreadmill = v end)
+        y = y + 70
+        toggleRow(pProgress, y, "Auto Sell", "Sell satchel automatically", false, function(v) S.Config.AutoSell = v end)
+
+        -- SETTINGS
+        y = 10
+        toggleRow(pSettings, y, "Fast Move", "Use direct MoveTo (faster)", true, function(v) S.Config.FastMove = v end)
+        y = y + 70
+        toggleRow(pSettings, y, "Teleport Return", "Teleport back to base after steal (risky)", false, function(v) S.Config.TeleportReturn = v end)
+        y = y + 70
+        toggleRow(pSettings, y, "Webhook", "Send notifications to Discord", false, function(v) S.Config.WebhookEnabled = v end)
+        y = y + 70
+        local webhookBox = Instance.new("TextBox")
+        webhookBox.Size = UDim2.new(1, -20, 0, 36)
+        webhookBox.Position = UDim2.new(0, 10, 0, y)
+        webhookBox.PlaceholderText = "Webhook URL"
+        webhookBox.Text = ""
+        webhookBox.BackgroundColor3 = Color3.fromRGB(30, 40, 55)
+        webhookBox.TextColor3 = Color3.fromRGB(255,255,255)
+        webhookBox.Font = Enum.Font.Gotham
+        webhookBox.TextSize = 13
+        webhookBox.BorderSizePixel = 0
+        webhookBox.Parent = pSettings
+        local wc = Instance.new("UICorner")
+        wc.CornerRadius = UDim.new(0, 6)
+        wc.Parent = webhookBox
+        webhookBox.Changed:Connect(function() S.Config.WebhookUrl = webhookBox.Text end)
+
+        -- Tab switching
+        for i, btn in ipairs(tabButtons) do
+            btn.MouseButton1Click:Connect(function()
+                for j, page in ipairs(pages) do
+                    page.Visible = (i == j)
+                end
+                for _, b in ipairs(tabButtons) do
+                    b.BackgroundColor3 = Color3.fromRGB(25, 35, 50)
+                    b.TextColor3 = Color3.fromRGB(200, 220, 255)
+                end
+                btn.BackgroundColor3 = Color3.fromRGB(0, 120, 200)
+                btn.TextColor3 = Color3.fromRGB(255,255,255)
+            end)
+        end
+        tabButtons[1].BackgroundColor3 = Color3.fromRGB(0, 120, 200)
+        tabButtons[1].TextColor3 = Color3.fromRGB(255,255,255)
+
+        return gui, statusLabel, targetLabel, statsLabel
+    end
+
+    -- CORE FUNCTIONS
+    local Remote = {}
+    local function getRemotes()
+        local net = ReplicatedStorage:FindFirstChild("Packages") and ReplicatedStorage.Packages:FindFirstChild("Networking")
+        if not net then return end
+        Remote.EggSnapshot = net:FindFirstChild("RF/EggWorld/AskFieldEggSnapshot")
+        Remote.MonsterSnapshot = net:FindFirstChild("RF/MonsterParasite/AskSnapshot")
+        Remote.MonsterFeed = net:FindFirstChild("RF/MonsterParasite/AskFeed")
+        Remote.MonsterChestTake = net:FindFirstChild("RF/MonsterParasite/AskChestTake")
+        Remote.MonsterChestClaim = net:FindFirstChild("RF/MonsterParasite/AskChestClaim")
+        Remote.Hatch = net:FindFirstChild("RF/EggWorld/AskHatch")
+        Remote.HatchFinish = net:FindFirstChild("RF/EggWorld/AskFinishHatch")
+        Remote.TreadRaise = net:FindFirstChild("RF/Treadmill/AskTierRaise")
+        Remote.SatchelSale = net:FindFirstChild("RF/Haul/OfferFullSatchelSale")
+        Remote.WearBest = net:FindFirstChild("RF/Haul/WearBest")
+        Remote.AwayCollect = net:FindFirstChild("RF/AwayEarnings/AskCollect")
+        Remote.PlotState = net:FindFirstChild("RF/Homestead/AskState")
+    end
+    getRemotes()
+
+    local function invoke(remote, ...)
+        if not remote then return false end
+        local ok, res = pcall(remote.InvokeServer, remote, ...)
+        return ok and res
+    end
+
+    local function getCharacter()
+        local c = LocalPlayer.Character
+        if not c or not c.Parent then return nil, nil end
+        return c, c:FindFirstChild("HumanoidRootPart")
+    end
+
+    local function closeEnough(pos1, pos2, dist)
+        dist = dist or 6
+        return (pos1 - pos2).Magnitude <= dist
+    end
+
+    local function getRarity(rec)
+        local r = rec.Rarity or rec.RarityName or rec.Tier
+        if type(r) == "string" then return r end
+        return nil
+    end
+
+    local function readEggs()
+        if not Remote.EggSnapshot then return {} end
+        local ok, snap = pcall(Remote.EggSnapshot.InvokeServer, Remote.EggSnapshot)
+        if not ok or type(snap) ~= "table" then return {} end
+        local eggs = {}
+        local function collect(t)
+            if type(t) ~= "table" then return end
+            if t.Uid and (t.State == "Slot" or t.State == "Dropped" or t.State == nil) then
+                table.insert(eggs, t)
+            end
+            for _, v in pairs(t) do if type(v) == "table" then collect(v) end end
+        end
+        collect(snap)
+        return eggs
+    end
+
+    -- Walking
+    local function walkTo(pos, stopDist, timeout)
+        stopDist = stopDist or S.Config.StopDistance or 5.5
+        timeout = timeout or S.Config.WalkTimeout or 30
+        local char, root = getCharacter()
+        if not char or not root then return false end
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if not hum then return false end
+
+        if closeEnough(root.Position, pos, stopDist) then return true end
+
+        local startTime = os.clock()
+        local lastPos = root.Position
+        local stuckCount = 0
+        local waypoints = nil
+        local wpIndex = 1
+
+        local function buildPath()
+            local path = PathfindingService:CreatePath({AgentRadius=2, AgentHeight=5, AgentCanJump=true, WaypointSpacing=5})
+            local ok, err = pcall(function() path:ComputeAsync(root.Position, pos) end)
+            if ok and path.Status == Enum.PathStatus.Success then
+                local pts = path:GetWaypoints()
+                if #pts > 0 then
+                    waypoints = pts
+                    wpIndex = 1
+                    return true
+                end
+            end
+            waypoints = nil
+            return false
+        end
+
+        while os.clock() - startTime < timeout do
+            if not root.Parent or hum.Health <= 0 then return false end
+
+            if closeEnough(root.Position, pos, stopDist) then
+                hum:MoveTo(root.Position)
+                return true
+            end
+
+            local now = os.clock()
+            local moved = (root.Position - lastPos).Magnitude
+            if moved < 0.8 then stuckCount = stuckCount + 1 else stuckCount = 0 end
+            lastPos = root.Position
+
+            local target = pos
+            if S.Config.FastMove and stuckCount < 3 then
+                -- direct
+            elseif not waypoints or stuckCount >= 3 then
+                buildPath()
+                stuckCount = 0
+            end
+
+            if waypoints and waypoints[wpIndex] then
+                local wp = waypoints[wpIndex]
+                if closeEnough(root.Position, wp.Position, 4) then
+                    wpIndex = wpIndex + 1
+                    wp = waypoints[wpIndex]
+                end
+                if wp then
+                    target = wp.Position
+                    if wp.Action == Enum.PathWaypointAction.Jump then
+                        hum.Jump = true
+                    end
+                else
+                    waypoints = nil
+                end
+            end
+
+            -- Evasive
+            if S.Config.EvasiveRun then
+                local threats = {}
+                for _, obj in ipairs(workspace:GetDescendants()) do
+                    if obj:IsA("Model") and obj:FindFirstChild("Humanoid") and obj ~= char then
+                        local hp = obj:FindFirstChild("HumanoidRootPart")
+                        if hp and obj:FindFirstChildOfClass("Humanoid").Health > 0 then
+                            local dist = (root.Position - hp.Position).Magnitude
+                            if dist < 20 and dist > 1 then
+                                table.insert(threats, hp.Position)
+                            end
+                        end
+                    end
+                end
+                if #threats > 0 then
+                    local avg = Vector3.zero
+                    for _, p in ipairs(threats) do avg = avg + p end
+                    avg = avg / #threats
+                    local away = (root.Position - avg).Unit * 8
+                    target = root.Position + (target - root.Position).Unit * 10 + away
+                end
+            end
+
+            hum:MoveTo(target)
+            task.wait(0.12)
+        end
+        return false
+    end
+
+    -- MAIN STEAL
+    local scanned = 0
+    local picked = 0
+    local lastAction = "Ready"
+    local currentTarget = "None"
+    local farmBusy = false
+
+    local function sendWebhook(title, desc)
+        if not S.Config.WebhookEnabled or S.Config.WebhookUrl == "" then return end
+        local data = {username="EggStealerPro", embeds={{title=title, description=desc, color=0x00ccff}}}
+        local body = HttpService:JSONEncode(data)
+        local request = syn and syn.request or http_request or request
+        if request then
+            pcall(function()
+                request({Url=S.Config.WebhookUrl, Method="POST", Headers={["Content-Type"]="application/json"}, Body=body})
+            end)
+        end
+    end
+
+    local function getBestEgg()
+        local eggs = readEggs()
+        scanned = scanned + #eggs
+        local targets = {}
+        for _, e in ipairs(eggs) do
+            local r = getRarity(e)
+            if r and S.Config.RarityTargets[r] then
+                table.insert(targets, e)
+            end
+        end
+        local rankOrder = {Divine=10, Eternal=9, Secret=8, Cosmic=7, Mythic=6, Legendary=5, Epic=4, Rare=3, Uncommon=2, Common=1}
+        table.sort(targets, function(a,b)
+            local ra = rankOrder[getRarity(a)] or 0
+            local rb = rankOrder[getRarity(b)] or 0
+            if ra ~= rb then return ra > rb end
+            local _, root = getCharacter()
+            if root then
+                local da = (root.Position - (a.CFrame and a.CFrame.Position or Vector3.new(0,0,0))).Magnitude
+                local db = (root.Position - (b.CFrame and b.CFrame.Position or Vector3.new(0,0,0))).Magnitude
+                return da < db
+            end
+            return false
+        end)
+        return targets[1]
+    end
+
+    local function stealEgg()
+        local target = getBestEgg()
+        if not target then
+            currentTarget = "None"
+            lastAction = "Searching..."
+            return false
+        end
+        local uid = target.Uid
+        local rarity = getRarity(target)
+        currentTarget = rarity or "Unknown"
+        lastAction = "Moving to " .. (rarity or "egg")
+
+        local pos = target.CFrame and target.CFrame.Position or target.Position
+        if not pos then
+            local obj = workspace:FindFirstChild("AreaEggSlotsClient") and workspace.AreaEggSlotsClient:FindFirstChild(tostring(uid), true)
+            if obj then
+                local part = obj:FindFirstChildWhichIsA("BasePart")
+                if part then pos = part.Position end
+            end
+        end
+        if not pos then
+            lastAction = "No position found"
+            return false
+        end
+
+        if not walkTo(pos, 6, 25) then
+            lastAction = "Failed to reach egg"
+            return false
+        end
+
+        local function findPrompt()
+            local smart = workspace:FindFirstChild("SmartPromptPart")
+            if smart then
+                for _, d in ipairs(smart:GetDescendants()) do
+                    if d:IsA("ProximityPrompt") and d.Name:find("CarryAreaEgg") then
+                        return d
+                    end
+                end
+            end
+            local obj = workspace:FindFirstChild("AreaEggSlotsClient") and workspace.AreaEggSlotsClient:FindFirstChild(tostring(uid), true)
+            if obj then
+                for _, d in ipairs(obj:GetDescendants()) do
+                    if d:IsA("ProximityPrompt") then return d end
+                end
+            end
+            return nil
+        end
+
+        local prompt = findPrompt()
+        if not prompt then
+            task.wait(0.5)
+            prompt = findPrompt()
+        end
+        if not prompt then
+            lastAction = "No prompt found"
+            return false
+        end
+
+        lastAction = "Stealing..."
+        local ok = pcall(function()
+            if fireproximityprompt then fireproximityprompt(prompt)
+            else prompt:InputHoldBegin(); task.wait(0.5); prompt:InputHoldEnd() end
+        end)
+        if not ok then
+            lastAction = "Prompt failed"
+            return false
+        end
+
+        task.wait(0.8)
+        local still = readEggs()
+        local stillHas = false
+        for _, e in ipairs(still) do
+            if e.Uid == uid then stillHas = true; break end
+        end
+        if stillHas then
+            prompt = findPrompt()
+            if prompt then
+                pcall(function()
+                    if fireproximityprompt then fireproximityprompt(prompt)
+                    else prompt:InputHoldBegin(); task.wait(0.5); prompt:InputHoldEnd() end
+                end)
+                task.wait(0.8)
+                still = readEggs()
+                stillHas = false
+                for _, e in ipairs(still) do
+                    if e.Uid == uid then stillHas = true; break end
+                end
+            end
+            if stillHas then
+                lastAction = "Steal failed"
+                return false
+            end
+        end
+
+        picked = picked + 1
+        lastAction = "Picked " .. (rarity or "egg")
+        sendWebhook("Egg Stolen", string.format("Rarity: %s\nUID: %s", rarity or "Unknown", uid))
+
+        if S.Config.AutoReturnBase and S.Config.BaseCF then
+            if S.Config.TeleportReturn then
+                lastAction = "Teleporting to base"
+                teleportToPosition(S.Config.BaseCF.Position)
+            else
+                lastAction = "Returning to base"
+                walkTo(S.Config.BaseCF.Position, 7, 20)
+            end
+        end
+
+        return true
+    end
+
+    -- MONSTER FEED & CHEST
+    local function getMonster()
+        local folder = workspace:FindFirstChild("MonsterParasiteMonsters")
+        if not folder then return nil end
+        for _, m in ipairs(folder:GetChildren()) do
+            if m:IsA("Model") then
+                local owner = m:GetAttribute("OwnerUserId")
+                if tonumber(owner) == LocalPlayer.UserId then
+                    return m
+                end
+            end
+        end
+        return nil
+    end
+
+    local function getMonsterPosition()
+        local m = getMonster()
+        if not m then return nil end
+        local part = m:FindFirstChild("HumanoidRootPart") or m:FindFirstChild("RootPart") or m.PrimaryPart
+        if part then return part.Position end
+        return nil
+    end
+
+    local function feedMonster()
+        if not Remote.MonsterSnapshot or not Remote.MonsterFeed then return false end
+        local snap = invoke(Remote.MonsterSnapshot)
+        if not snap or not snap.Event or not snap.Event.Active then
+            lastAction = "Monster not active"
+            return false
+        end
+
+        local eggs = readEggs()
+        local candidate = nil
+        for _, e in ipairs(eggs) do
+            local r = getRarity(e)
+            if r and S.Config.FeedRarities[r] then
+                if S.Config.ProtectRarities and S.Config.RarityTargets[r] then
+                    -- skip
+                else
+                    candidate = e
+                    break
+                end
+            end
+        end
+        if not candidate then
+            lastAction = "No feed egg"
+            return false
+        end
+
+        local uid = candidate.Uid
+        local pos = candidate.CFrame and candidate.CFrame.Position or candidate.Position
+        if not pos then
+            local obj = workspace:FindFirstChild("AreaEggSlotsClient") and workspace.AreaEggSlotsClient:FindFirstChild(tostring(uid), true)
+            if obj then
+                local part = obj:FindFirstChildWhichIsA("BasePart")
+                if part then pos = part.Position end
+            end
+        end
+        if not pos then return false end
+
+        if not walkTo(pos, 6, 20) then return false end
+        local function findPrompt2()
+            local obj = workspace:FindFirstChild("AreaEggSlotsClient") and workspace.AreaEggSlotsClient:FindFirstChild(tostring(uid), true)
+            if obj then
+                for _, d in ipairs(obj:GetDescendants()) do
+                    if d:IsA("ProximityPrompt") then return d end
+                end
+            end
+            return nil
+        end
+        local prompt = findPrompt2()
+        if not prompt then task.wait(0.5); prompt = findPrompt2() end
+        if not prompt then return false end
+        pcall(function()
+            if fireproximityprompt then fireproximityprompt(prompt)
+            else prompt:InputHoldBegin(); task.wait(0.5); prompt:InputHoldEnd() end
+        end)
+        task.wait(0.8)
+        local still = readEggs()
+        local found = false
+        for _, e in ipairs(still) do if e.Uid == uid then found = true; break end end
+        if found then return false end
+
+        local monsterPos = getMonsterPosition()
+        if not monsterPos then
+            lastAction = "Monster not found"
+            return false
+        end
+        if not walkTo(monsterPos, 8, 20) then return false end
+
+        local ok, res = pcall(Remote.MonsterFeed.InvokeServer, Remote.MonsterFeed)
+        if not ok then return false end
+        if type(res) == "table" and res.Success then
+            lastAction = "Fed monster"
+            sendWebhook("Monster Fed", string.format("Charge: %s → %s", res.PreviousCharge or 0, res.Charge or 0))
+            return true
+        end
+        return false
+    end
+
+    local function claimChest()
+        if not Remote.MonsterChestTake or not Remote.MonsterChestClaim then return false end
+        local okTake = invoke(Remote.MonsterChestTake)
+        if not okTake or type(okTake) ~= "table" or not okTake.Success then return false end
+        task.wait(2.5)
+        local okClaim = invoke(Remote.MonsterChestClaim)
+        if okClaim and type(okClaim) == "table" and okClaim.Success then
+            lastAction = "Chest claimed"
+            sendWebhook("Chest Claimed", "Reward: " .. tostring(okClaim.Reward and okClaim.Reward.DisplayName or "unknown"))
+            return true
+        end
+        return false
+    end
+
+    -- TREADMILL & HATCH
+    local function getOwnPlot()
+        local plots = workspace:FindFirstChild("Plots")
+        if not plots then return nil end
+        if Remote.PlotState then
+            local state = invoke(Remote.PlotState)
+            if state and state.OwnersBySlot then
+                for slot, owner in pairs(state.OwnersBySlot) do
+                    if owner == LocalPlayer.UserId then
+                        return plots:FindFirstChild(tostring(slot))
+                    end
+                end
+            end
+        end
+        return nil
+    end
+
+    local function treadmillWork()
+        local plot = getOwnPlot()
+        if not plot then
+            lastAction = "No own plot"
+            return false
+        end
+        local belt = plot:FindFirstChild("TreadmillBottom", true)
+        if not belt or not belt:IsA("BasePart") then
+            belt = plot:FindFirstChildWhichIsA("BasePart", true)
+        end
+        if not belt then return false end
+        local pos = belt.Position
+        if not walkTo(pos, 5, 15) then return false end
+        local _, root = getCharacter()
+        if root then
+            local dir = belt.CFrame.LookVector
+            local offset = dir * (math.random() > 0.5 and 2 or -2)
+            local target = pos + offset
+            local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if hum then hum:MoveTo(target) end
+        end
+        lastAction = "Treadmill training"
+        return true
+    end
+
+    local function hatchEggs()
+        if not Remote.Hatch or not Remote.HatchFinish then return false end
+        local eggs = readEggs()
+        local count = 0
+        for _, e in ipairs(eggs) do
+            if e.Uid then
+                if invoke(Remote.Hatch, {Uid=e.Uid}) then
+                    task.wait(0.2)
+                    invoke(Remote.HatchFinish, {Uid=e.Uid})
+                    count = count + 1
+                end
+            end
+        end
+        if count > 0 then
+            lastAction = "Hatched " .. count .. " eggs"
+            return true
+        end
+        return false
+    end
+
+    -- SCHEDULER
+    local function scheduler()
+        local lastSteal = 0
+        local lastMonster = 0
+        local lastChest = 0
+        local lastTread = 0
+        local lastHatch = 0
+        local lastSell = 0
+        local lastUpgrade = 0
+
+        while task.wait(0.2) do
+            if not S.Gui or not S.Gui.Parent then break end
+
+            if farmBusy then continue end
+            farmBusy = true
+
+            local now = os.clock()
+
+            if S.Config.AutoSteal and now - lastSteal > 2 then
+                stealEgg()
+                lastSteal = now
+                task.wait(0.5)
+            end
+
+            if S.Config.AutoFeedMonster and now - lastMonster > 3 then
+                feedMonster()
+                lastMonster = now
+                task.wait(0.5)
+            end
+
+            if S.Config.AutoClaimChests and now - lastChest > 5 then
+                claimChest()
+                lastChest = now
+                task.wait(0.5)
+            end
+
+            if S.Config.AutoTreadmill and now - lastTread > 2 then
+                treadmillWork()
+                lastTread = now
+                task.wait(0.5)
+            end
+
+            if S.Config.AutoHatch and now - lastHatch > 10 then
+                hatchEggs()
+                lastHatch = now
+                task.wait(0.5)
+            end
+
+            if S.Config.AutoUpgradeTreadmill and Remote.TreadRaise and now - lastUpgrade > 30 then
+                local ok = invoke(Remote.TreadRaise, "some_treadmill_id")
+                if ok then lastAction = "Treadmill upgraded" end
+                lastUpgrade = now
+            end
+
+            if S.Config.AutoSell and Remote.SatchelSale and now - lastSell > 20 then
+                invoke(Remote.SatchelSale)
+                lastSell = now
+            end
+
+            farmBusy = false
+        end
+    end
+
+    -- START EGG STEALER PRO
+    local function startEggStealer()
+        local gui, statusLabel, targetLabel, statsLabel = createGui()
+        S.Gui = gui
+
+        task.spawn(function()
+            while gui and gui.Parent do
+                task.wait(1)
+                statusLabel.Text = "Status: " .. lastAction
+                targetLabel.Text = "Target: " .. currentTarget
+                statsLabel.Text = string.format("Scanned: %d | Picked: %d", scanned, picked)
+            end
+        end)
+
+        task.spawn(scheduler)
+
+        -- Auto-rejoin
+        game:OnTeleport(function(state)
+            if state == Enum.TeleportState.Teleporting then
+                task.wait(3)
+                TeleportService:Teleport(game.PlaceId, LocalPlayer)
+            end
+        end)
+
+        -- Save base position
+        local function saveBase()
+            local _, root = getCharacter()
+            if root then S.Config.BaseCF = root.CFrame end
+        end
+        task.wait(2)
+        saveBase()
+        LocalPlayer.CharacterAdded:Connect(saveBase)
+
+        print("Egg Stealer Pro v3.1 started. Toggle Teleport Return in SETTINGS.")
+    end
+
+    -- Gọi start
+    startEggStealer()
+
+    -- ==========================================
+    -- KẾT THÚC EGG STEALER PRO
+    -- ==========================================
+end)
+
+-- 5. HIỂN THỊ GUI
+ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")

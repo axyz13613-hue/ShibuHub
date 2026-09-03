@@ -1,5 +1,5 @@
 --[[
-    ShiBuHub v2.2.0 TREADMILL
+    ShiBuHub v2.3.0 SINGLE SCHEDULER
     Immediate loading screen -> protected compile/run -> menu.
     If initialization fails, the loading panel shows the exact error instead of silently disappearing.
 ]]
@@ -72,7 +72,7 @@ version.Font=Enum.Font.Gotham
 version.TextSize=12
 version.TextColor3=Color3.fromRGB(142,176,192)
 version.TextXAlignment=Enum.TextXAlignment.Left
-version.Text="v2.2.0 • Monster Auto Feed"
+version.Text="v2.3.0 • Monster Auto Feed"
 version.ZIndex=5002
 version.Parent=card
 
@@ -149,7 +149,7 @@ task.wait(.03)
 
 local SOURCE = [======[
 --[[
-    ShiBuHub v2.2.0 • TREADMILL + MONSTER AUTO FEED
+    ShiBuHub v2.3.0 • TREADMILL + MONSTER AUTO FEED
     Steal An Egg • Delta X Mobile
     - Embedded ShiBuHub logo
     - Cyan/teal cloud-tech UI
@@ -749,7 +749,7 @@ local function sendWebhook(title, description)
         embeds={{
             title=tostring(title),
             description=tostring(description),
-            footer={text="ShiBuHub v2.2.0"},
+            footer={text="ShiBuHub v2.3.0"},
             timestamp=DateTime.now():ToIsoDate(),
         }}
     })
@@ -1532,7 +1532,7 @@ end
 
 pageHeader(Home,"ShiBuHub Dashboard","Cloud-tech themed build • branded edition")
 homeCard=card(Home,80,180)
-hl=textLabel(homeCard,"ShiBuHub v2.2.0",22,true)
+hl=textLabel(homeCard,"ShiBuHub v2.3.0",22,true)
 hl.Position=UDim2.fromOffset(18,16); hl.Size=UDim2.new(1,-36,0,32); hl.TextColor3=C.CYAN
 h2=textLabel(homeCard,"Egg farming engine + Hungry Monster monitor",13,false)
 h2.Position=UDim2.fromOffset(18,54); h2.Size=UDim2.new(1,-36,0,24); h2.TextColor3=C.MUTED
@@ -2327,7 +2327,7 @@ whTest=button(whCard,"SAVE + TEST")
 whTest.Size=UDim2.new(1,-32,0,42); whTest.Position=UDim2.fromOffset(16,108)
 whTest.MouseButton1Click:Connect(function()
     Config.WebhookUrl=whBox.Text
-    local ok,why=sendWebhook("ShiBuHub connected","Webhook test from ShiBuHub v2.2.0")
+    local ok,why=sendWebhook("ShiBuHub connected","Webhook test from ShiBuHub v2.3.0")
     whTest.Text=ok and "✓ TEST SENT" or ("FAILED • "..tostring(why))
 end)
 
@@ -2501,8 +2501,13 @@ end)
 task.spawn(function()
     while Gui.Parent and G.ShiBuHubRunId==RUN_ID do
         task.wait(.35)
-        statusText.Text = Config.AutoSteal and ("Running • "..LastAction) or ("Ready • "..LastAction)
-        statusText.TextColor3 = Config.AutoSteal and C.TEAL or C.GREEN
+        local activeAutomation =
+            Config.AutoSteal or Config.AutoFeedMonster or Config.AutoClaimMonsterChests
+            or Config.AutoTreadmill or Config.AutoUpgradeTreadmill or Config.AutoHatch
+            or Config.AutoCollectAway or Config.AutoWearBest or Config.AutoRedeemCodex
+            or Config.AutoSellSatchel
+        statusText.Text = activeAutomation and ("Queue • "..LastAction) or ("Ready • "..LastAction)
+        statusText.TextColor3 = activeAutomation and C.TEAL or C.GREEN
         statusMeta.Text = "Scanned: "..tostring(Scanned).."   •   Target: "..tostring(CurrentTarget)
         if protectText then protectText.Text="Protected: "..targetSummary() end
         if feedInfo then feedInfo.Text="Feed: "..eventFeedSummary() end
@@ -2513,182 +2518,254 @@ task.spawn(function()
 end)
 
 
--- Feature-parity background utilities.
-task.spawn(function()
-    local lastESP,lastHatch,lastCollect,lastWear,lastCodex,lastSell=0,0,0,0,0,0
-    while Gui.Parent and G.ShiBuHubRunId==RUN_ID do
-        task.wait(.5)
-        local now=os.clock()
+-- Single gameplay scheduler.
+-- All automatic gameplay/server actions run through this dispatcher so
+-- Auto-Steal, Hungry Monster, Treadmill, Hatch and progression requests
+-- never execute concurrently with each other.
+local SchedulerDue={}
+local SchedulerMonsterTurn="feed"
+local lastFoundUid=nil
 
-        if Config.EggESP and now-lastESP>=1.5 then
-            lastESP=now
-            pcall(rebuildEggESP)
-        elseif not Config.EggESP and #ESPFolder:GetChildren()>0 then
+local function schedulerDue(name,interval)
+    local now=os.clock()
+    local at=SchedulerDue[name] or 0
+    if now<at then return false end
+    SchedulerDue[name]=now+interval
+    return true
+end
+
+local function schedulerRun(label,fn)
+    if FarmBusy then return false,"busy" end
+    FarmBusy=true
+
+    local ok,a,b,c=xpcall(fn,function(err)
+        if debug and debug.traceback then
+            local okTb,tb=pcall(debug.traceback,tostring(err),2)
+            if okTb and tb then return tb end
+        end
+        return tostring(err)
+    end)
+
+    FarmBusy=false
+
+    if not ok then
+        LastAction=label.." error • "..tostring(a)
+        return false,a
+    end
+
+    return true,a,b,c
+end
+
+local function schedulerHatchOnce()
+    local eggs=readLiveEggs()
+    if type(eggs)~="table" or #eggs==0 then
+        return false,"no eggs"
+    end
+
+    -- Small batch: avoid large remote bursts while other automations are active.
+    local done=0
+    for _,rec in ipairs(eggs) do
+        if rec.Uid and done<3 then
+            invokeUid(RF_Hatch,rec.Uid)
+            task.wait(.12)
+            invokeUid(RF_HatchFinish,rec.Uid)
+            done+=1
+            task.wait(.12)
+        end
+    end
+
+    if done>0 then
+        LastAction="Hatch queue • "..tostring(done).." egg(s)"
+        return true,done
+    end
+    return false,"nothing hatchable"
+end
+
+local function schedulerStealOnce()
+    local selected=selectedRarities()
+
+    if #selected==0 then
+        CurrentTarget="None"
+        LastAction="Select at least one rarity"
+        return false,"no-rarity"
+    end
+
+    local target=bestEgg()
+
+    if target and Config.NotifyTargetFound
+        and tostring(target.Record.Uid)~=tostring(lastFoundUid) then
+
+        lastFoundUid=tostring(target.Record.Uid)
+        task.spawn(function()
+            sendWebhook(
+                "Target found • "..tostring(target.Rarity),
+                "UID: `"..tostring(target.Record.Uid).."`"
+            )
+        end)
+    end
+
+    if not target then
+        CurrentTarget="None"
+        LastAction="Searching "..targetSummary()
+        return false,"no-target"
+    end
+
+    return carryEgg(target)
+end
+
+local MonsterActiveCached=false
+local MonsterActiveCheckedAt=0
+
+local function schedulerMonsterActive()
+    local now=os.clock()
+    if now-MonsterActiveCheckedAt<3 then
+        return MonsterActiveCached
+    end
+
+    MonsterActiveCheckedAt=now
+    local snap=monsterSnapshot()
+    MonsterActiveCached=snap and snap.Event and snap.Event.Active==true or false
+    return MonsterActiveCached
+end
+
+task.spawn(function()
+    while Gui.Parent and G.ShiBuHubRunId==RUN_ID do
+        task.wait(.18)
+
+        -- Clear ESP without a server request when disabled.
+        if not Config.EggESP and #ESPFolder:GetChildren()>0 then
             clearEggESP()
         end
 
-        if Config.AutoHatch and now-lastHatch>=2.5 then
-            lastHatch=now
-            local ok,eggs=pcall(readLiveEggs)
-            if ok then
-                local done=0
-                for _,rec in ipairs(eggs) do
-                    if rec.Uid and done<8 then
-                        invokeUid(RF_Hatch,rec.Uid)
-                        task.wait(.06)
-                        invokeUid(RF_HatchFinish,rec.Uid)
-                        done+=1
-                    end
-                end
-            end
+        if FarmBusy then
+            continue
         end
 
-        if Config.AutoCollectAway and now-lastCollect>=30 then
-            lastCollect=now
-            invokeRemote(RF_AwayCollect)
-        end
-        if Config.AutoWearBest and now-lastWear>=20 then
-            lastWear=now
-            invokeRemote(RF_WearBest)
-        end
-        if Config.AutoRedeemCodex and now-lastCodex>=45 then
-            lastCodex=now
-            invokeRemote(RF_CodexAll)
-        end
-        if Config.AutoSellSatchel and now-lastSell>=30 then
-            lastSell=now
-            invokeRemote(RF_SatchelSale)
-        end
-    end
-end)
+        local acted=false
 
-local lastFoundUid=nil
+        -- Hungry Monster uses one alternating lane when both functions are on.
+        if Config.AutoFeedMonster and Config.AutoClaimMonsterChests
+            and schedulerDue("monster_combo",1.0) then
 
--- Auto Treadmill loop.
-task.spawn(function()
-    while Gui.Parent and G.ShiBuHubRunId==RUN_ID do
-        task.wait(1.1)
-        if Config.AutoTreadmill and not FarmBusy and not Config.AutoSteal
-            and not Config.AutoFeedMonster and not Config.AutoClaimMonsterChests then
-
-            local ok,worked,msg=pcall(autoTreadmillStep)
-            if ok and worked then
-                LastAction="Treadmill • "..tostring(msg)
-            elseif ok then
-                LastAction="Treadmill • "..tostring(msg)
+            if SchedulerMonsterTurn=="feed" then
+                SchedulerMonsterTurn="chest"
+                schedulerRun("Hungry Monster feed",autoFeedCycle)
             else
-                LastAction="Treadmill error • "..tostring(worked)
+                SchedulerMonsterTurn="feed"
+                schedulerRun("Hungry Monster chest",autoClaimMonsterChestCycle)
             end
-        end
-    end
-end)
+            acted=true
 
--- Auto Upgrade Treadmill loop.
-task.spawn(function()
-    while Gui.Parent and G.ShiBuHubRunId==RUN_ID do
-        task.wait(4)
-        if Config.AutoUpgradeTreadmill and not FarmBusy then
+        elseif Config.AutoFeedMonster and schedulerDue("monster_feed",1.25) then
+            schedulerRun("Hungry Monster feed",autoFeedCycle)
+            acted=true
+
+        elseif Config.AutoClaimMonsterChests and schedulerDue("monster_chest",3.2) then
+            schedulerRun("Hungry Monster chest",autoClaimMonsterChestCycle)
+            acted=true
+        end
+
+        -- Progression maintenance gets a chance before the long Auto-Steal cycle.
+        if not acted and Config.AutoUpgradeTreadmill and schedulerDue("tread_upgrade",5) then
             local info=nextTreadmillUpgrade()
             if info and info.Affordable then
-                local ok,res,detail=upgradeTreadmillOnce()
-                if ok then
-                    LastAction="Treadmill upgraded • "..tostring(detail and detail.Id or "?")
-                    task.wait(2)
-                elseif detail then
-                    LastAction="Treadmill upgrade • "..tostring(detail)
-                end
+                schedulerRun("Treadmill upgrade",function()
+                    local ok,res,detail=upgradeTreadmillOnce()
+                    if ok then
+                        LastAction="Treadmill upgraded • "..tostring(detail and detail.Id or "?")
+                    elseif detail then
+                        LastAction="Treadmill upgrade • "..tostring(detail)
+                    end
+                    return ok,res,detail
+                end)
+                acted=true
             end
         end
-    end
-end)
 
--- Hungry Monster Auto Claim Chest loop.
-task.spawn(function()
-    while Gui.Parent and G.ShiBuHubRunId==RUN_ID do
-        task.wait(.8)
-        if Config.AutoClaimMonsterChests and not FarmBusy then
-            FarmBusy=true
-            local ok,err=pcall(autoClaimMonsterChestCycle)
-            if not ok then
-                LastAction="Monster chest error: "..tostring(err)
-            end
-            FarmBusy=false
-            task.wait(.65)
+        if not acted and Config.AutoHatch and schedulerDue("hatch",3.25) then
+            schedulerRun("Auto Hatch",schedulerHatchOnce)
+            acted=true
         end
-    end
-end)
 
--- Hungry Monster Auto Feed loop.
-task.spawn(function()
-    while Gui.Parent and G.ShiBuHubRunId==RUN_ID do
-        task.wait(.45)
-        if Config.AutoFeedMonster and not FarmBusy then
-            FarmBusy=true
-            local ok,err=pcall(autoFeedCycle)
-            if not ok then
-                LastAction="Event error: "..tostring(err)
-            end
-            FarmBusy=false
-            task.wait(.35)
-        end
-    end
-end)
-
--- Auto round-trip loop:
--- scan -> run to selected egg -> use Steal prompt -> confirm -> run home -> repeat
-task.spawn(function()
-    while Gui.Parent and G.ShiBuHubRunId==RUN_ID do
-        task.wait(.35)
-
-        if Config.AutoSteal and not FarmBusy and not ((Config.AutoFeedMonster or Config.AutoClaimMonsterChests) and Config.PriorityHungryMonster and monsterIsActive()) then
-            FarmBusy=true
-
-            local ok,err=pcall(function()
-                local selected=selectedRarities()
-
-                if #selected==0 then
-                    CurrentTarget="None"
-                    LastAction="Select at least one rarity"
-                    task.wait(.5)
-                    return
-                end
-
-                local target=bestEgg()
-
-                if target and Config.NotifyTargetFound and tostring(target.Record.Uid)~=tostring(lastFoundUid) then
-                    lastFoundUid=tostring(target.Record.Uid)
-                    task.spawn(function()
-                        sendWebhook(
-                            "Target found • "..tostring(target.Rarity),
-                            "UID: `"..tostring(target.Record.Uid).."`"
-                        )
-                    end)
-                end
-
-                if not target then
-                    CurrentTarget="None"
-                    LastAction="Searching "..targetSummary()
-                    task.wait(.45)
-                    return
-                end
-
-                -- carryEgg is a complete cycle and does not return until
-                -- the character has picked the egg and returned to base.
-                carryEgg(target)
+        if not acted and Config.AutoCollectAway and schedulerDue("away",32) then
+            schedulerRun("Away Earnings",function()
+                return invokeRemote(RF_AwayCollect)
             end)
+            acted=true
+        end
 
-            if not ok then
-                LastAction="Error: "..tostring(err)
+        if not acted and Config.AutoWearBest and schedulerDue("wear_best",22) then
+            schedulerRun("Wear Best",function()
+                return invokeRemote(RF_WearBest)
+            end)
+            acted=true
+        end
+
+        if not acted and Config.AutoRedeemCodex and schedulerDue("codex",47) then
+            schedulerRun("Codex",function()
+                return invokeRemote(RF_CodexAll)
+            end)
+            acted=true
+        end
+
+        if not acted and Config.AutoSellSatchel and schedulerDue("sell",32) then
+            schedulerRun("Sell Satchel",function()
+                return invokeRemote(RF_SatchelSale)
+            end)
+            acted=true
+        end
+
+        -- ESP snapshot is also serialized because readEggs() invokes the server.
+        if not acted and Config.EggESP and schedulerDue("esp",2.25) then
+            schedulerRun("Egg ESP",function()
+                rebuildEggESP()
+                return true
+            end)
+            acted=true
+        end
+
+        -- Priority event mode pauses normal stealing only while the event is active.
+        if not acted and Config.AutoSteal and schedulerDue("steal",.75) then
+            local eventPriority=false
+            if Config.PriorityHungryMonster
+                and (Config.AutoFeedMonster or Config.AutoClaimMonsterChests) then
+                eventPriority=schedulerMonsterActive()
             end
 
-            FarmBusy=false
+            if eventPriority then
+                LastAction="Hungry Monster priority • normal steal paused"
+            else
+                schedulerRun("Auto Steal",schedulerStealOnce)
+            end
+            acted=true
+        end
+
+        -- Treadmill runs only when the longer farming jobs are disabled.
+        if not acted and Config.AutoTreadmill
+            and not Config.AutoSteal
+            and not Config.AutoFeedMonster
+            and not Config.AutoClaimMonsterChests
+            and schedulerDue("treadmill",1.4) then
+
+            schedulerRun("Treadmill",function()
+                local worked,msg=autoTreadmillStep()
+                LastAction="Treadmill • "..tostring(msg)
+                return worked,msg
+            end)
+            acted=true
+        end
+
+        -- Small gap between dispatched actions. This is for state settling and
+        -- to keep independent systems from racing each other.
+        if acted then
+            task.wait(.22)
         end
     end
 end)
 
 setPage("EGGS")
 refreshMonsterState()
-print("[ShiBuHub] v2.0.2 LOADING FIX loaded")
+print("[ShiBuHub] v2.3.0 SINGLE SCHEDULER loaded")
 
 
 pcall(function()
